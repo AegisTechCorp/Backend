@@ -1,4 +1,4 @@
-import { IsEmail, IsString, MinLength, MaxLength, IsOptional } from 'class-validator';
+import { IsEmail, IsString, MinLength, MaxLength, IsOptional, IsDateString } from 'class-validator';
 
 export class RegisterDto {
   @IsEmail({}, { message: 'Email invalide' })
@@ -18,4 +18,8 @@ export class RegisterDto {
   @IsString()
   @MaxLength(100)
   lastName?: string;
+
+  @IsOptional()
+  @IsDateString({}, { message: 'Date de naissance invalide (format: YYYY-MM-DD)' })
+  dateOfBirth?: string;
 }

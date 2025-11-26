@@ -26,6 +26,9 @@ export class User {
   @Column({ length: 100, nullable: true })
   lastName: string;
 
+  @Column({ type: 'date', nullable: true })
+  dateOfBirth: Date;
+
   @Column({ default: true })
   isActive: boolean;
 
