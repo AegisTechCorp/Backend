@@ -1,13 +1,17 @@
-import { IsEmail, IsString, Length, IsOptional, Matches, IsDateString, MaxLength } from 'class-validator';
+import { IsEmail, IsString, IsOptional, IsDateString, MaxLength, MinLength } from 'class-validator';
 
+/**
+ * DTO pour l'inscription avec authentification classique
+  * et architecture Vault Zero-Knowledge
+ */
 export class RegisterDto {
   @IsEmail({}, { message: 'Email invalide' })
   email: string;
 
-  @IsString({ message: 'L\'authHash doit être une chaîne de caractères' })
-  @Length(44, 44, { message: 'L\'authHash doit faire exactement 44 caractères' })
-  @Matches(/^[A-Za-z0-9+/]+=*$/, { message: 'L\'authHash doit être au format base64 valide' })
-  authHash: string;
+  @IsString({ message: 'Le mot de passe doit être une chaîne de caractères' })
+  @MinLength(8, { message: 'Le mot de passe doit contenir au moins 8 caractères' })
+  @MaxLength(128, { message: 'Le mot de passe ne peut pas dépasser 128 caractères' })
+  password: string;
 
   @IsOptional()
   @IsString()

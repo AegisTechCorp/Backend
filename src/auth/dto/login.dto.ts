@@ -1,11 +1,14 @@
-import { IsEmail, IsString, Length, Matches } from 'class-validator';
+import { IsEmail, IsString, MinLength, MaxLength } from 'class-validator';
 
+/**
+ * DTO pour la connexion avec authentification classique
+ */
 export class LoginDto {
   @IsEmail({}, { message: 'Email invalide' })
   email: string;
 
-  @IsString({ message: 'L\'authHash doit être une chaîne de caractères' })
-  @Length(44, 44, { message: 'L\'authHash doit faire exactement 44 caractères' })
-  @Matches(/^[A-Za-z0-9+/]+=*$/, { message: 'L\'authHash doit être au format base64 valide' })
-  authHash: string;
+  @IsString({ message: 'Le mot de passe doit être une chaîne de caractères' })
+  @MinLength(1, { message: 'Le mot de passe ne peut pas être vide' })
+  @MaxLength(128, { message: 'Le mot de passe ne peut pas dépasser 128 caractères' })
+  password: string;
 }
