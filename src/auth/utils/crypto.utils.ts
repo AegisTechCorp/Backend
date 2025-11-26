@@ -1,32 +1,32 @@
-import * as argon2 from 'argon2';
+import * as bcrypt from 'bcrypt';
 import { createHash, randomBytes } from 'crypto';
 
 
 /**
- * Hashe un mot de passe avec Argon2id pour stockage sécurisé
- * Utilisé pour l'AUTHENTIFICATION (vérification du mot de passe)
+ * Hashe un mot de passe avec Bcrypt pour stockage sécurisé
+ * Utilisé pour l'AUTHENTIFICATION
  *
- * @param password - Mot de passe en clair
- * @returns Hash Argon2id prêt pour le stockage en base de données
+ * Paramètres Bcrypt :
+ * - saltRounds: 12 (2^12 = 4096 itérations, recommandé en 2024)
+ * - Génère automatiquement un salt aléatoire unique par hash
+ *
+ * @param password 
+ * @returns Hash Bcrypt prêt pour le stockage en base de données
  */
 export async function hashPassword(password: string): Promise<string> {
   try {
-    return await argon2.hash(password, {
-      type: argon2.argon2id,
-      memoryCost: 65536, // 64 MB
-      timeCost: 3,       // 3 itérations
-      parallelism: 4,    // 4 threads
-    });
+    const saltRounds = 12; // 2^12 = 4096 itérations
+    return await bcrypt.hash(password, saltRounds);
   } catch (error) {
     throw new Error('Erreur lors du hashage du mot de passe');
   }
 }
 
 /**
- * Vérifie si un mot de passe correspond au hash stocké
+ * Vérifie si un mot de passe correspond au hash Bcrypt stocké
  * Utilisé lors de la CONNEXION
  *
- * @param storedHash - Hash Argon2id stocké en base de données
+ * @param storedHash - Hash Bcrypt stocké en base de données
  * @param password - Mot de passe fourni par l'utilisateur
  * @returns true si le mot de passe correspond, false sinon
  */
@@ -35,7 +35,7 @@ export async function verifyPassword(
   password: string,
 ): Promise<boolean> {
   try {
-    return await argon2.verify(storedHash, password);
+    return await bcrypt.compare(password, storedHash);
   } catch (error) {
     return false;
   }
@@ -67,22 +67,18 @@ export function generateRecoveryKey(): string {
 }
 
 /**
- * Hashe une clé de récupération pour stockage sécurisé
+ * Hashe une clé de récupération pour stockage sécurisé avec Bcrypt
  * @param recoveryKey - Clé de récupération en clair
- * @returns Hash Argon2id de la clé de récupération
+ * @returns Hash Bcrypt de la clé de récupération
  */
 export async function hashRecoveryKey(recoveryKey: string): Promise<string> {
-  return await argon2.hash(recoveryKey, {
-    type: argon2.argon2id,
-    memoryCost: 32768, 
-    timeCost: 2,
-    parallelism: 2,
-  });
+  const saltRounds = 12;
+  return await bcrypt.hash(recoveryKey, saltRounds);
 }
 
 /**
- * Vérifie une clé de récupération
- * @param storedHash - Hash de la clé de récupération stocké en base
+ * Vérifie une clé de récupération avec Bcrypt
+ * @param storedHash - Hash Bcrypt de la clé de récupération stocké en base
  * @param recoveryKey - Clé de récupération fournie par l'utilisateur
  * @returns true si la clé correspond
  */
@@ -91,7 +87,7 @@ export async function verifyRecoveryKey(
   recoveryKey: string,
 ): Promise<boolean> {
   try {
-    return await argon2.verify(storedHash, recoveryKey);
+    return await bcrypt.compare(recoveryKey, storedHash);
   } catch (error) {
     return false;
   }
