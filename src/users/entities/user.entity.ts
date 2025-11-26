@@ -7,10 +7,15 @@ import {
 } from 'typeorm';
 
 /**
- * Entité User pour architecture Zero-Knowledge
+ * Entité User pour architecture Hybride (Auth Classique + Vault Zero-Knowledge)
  *
- * Le serveur ne stocke JAMAIS le mot de passe ou la masterKey.
- * Seul l'authHash (déjà hashé côté client) est stocké après un double hashage Argon2id.
+ * Architecture :
+ * - passwordHash : Hash Argon2id du mot de passe pour l'authentification (serveur)
+ * - vaultSalt : Salt aléatoire utilisé côté client pour dériver la masterKey du vault
+ *
+ * Le mot de passe a 2 usages :
+ * 1. Authentification : password → hashé serveur avec Argon2 → passwordHash
+ * 2. Vault : password + vaultSalt → dérivation client Argon2 → masterKey → chiffrement données
  */
 @Entity('users')
 export class User {
@@ -21,7 +26,10 @@ export class User {
   email: string;
 
   @Column({ length: 255 })
-  authHash: string; // Hash Argon2id de l'authHash (Zero-Knowledge)
+  passwordHash: string; // Hash Argon2id du password pour authentification
+
+  @Column({ length: 255 })
+  vaultSalt: string; // Salt pour dérivation client-side de la masterKey
 
   @Column({ length: 100, nullable: true })
   firstName: string;
@@ -36,7 +44,7 @@ export class User {
   isActive: boolean;
 
   @Column({ type: 'text', nullable: true })
-  recoveryKeyHash: string; // Hash de la clé de récupération (optionnel)
+  recoveryKeyHash: string; // Hash de la clé de récupération (à mettre en place si jamais)
 
   @CreateDateColumn()
   createdAt: Date;
@@ -46,7 +54,7 @@ export class User {
 
   // Méthode pour retourner l'utilisateur sans les données sensibles
   toJSON() {
-    const { authHash, recoveryKeyHash, ...user } = this;
+    const { passwordHash, recoveryKeyHash, ...user } = this;
     return user;
   }
 }
