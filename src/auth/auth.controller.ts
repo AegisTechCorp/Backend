@@ -50,6 +50,7 @@ export class AuthController {
     return {
       user: result.user,
       accessToken: result.accessToken,
+      vaultSalt: result.vaultSalt, // Nécessaire pour dérivation client-side de la masterKey
     };
   }
 
@@ -77,6 +78,7 @@ export class AuthController {
     return {
       user: result.user,
       accessToken: result.accessToken,
+      vaultSalt: result.vaultSalt, // Nécessaire pour dérivation client-side de la masterKey
     };
   }
 
