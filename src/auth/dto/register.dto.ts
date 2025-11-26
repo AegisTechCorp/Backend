@@ -1,13 +1,13 @@
-import { IsEmail, IsString, MinLength, MaxLength, IsOptional, IsDateString } from 'class-validator';
+import { IsEmail, IsString, Length, IsOptional, Matches, IsDateString, MaxLength } from 'class-validator';
 
 export class RegisterDto {
   @IsEmail({}, { message: 'Email invalide' })
   email: string;
 
-  @IsString()
-  @MinLength(12, { message: 'Le mot de passe doit contenir au moins 12 caractères' })
-  @MaxLength(128, { message: 'Le mot de passe ne peut pas dépasser 128 caractères' })
-  password: string;
+  @IsString({ message: 'L\'authHash doit être une chaîne de caractères' })
+  @Length(44, 44, { message: 'L\'authHash doit faire exactement 44 caractères' })
+  @Matches(/^[A-Za-z0-9+/]+=*$/, { message: 'L\'authHash doit être au format base64 valide' })
+  authHash: string;
 
   @IsOptional()
   @IsString()
