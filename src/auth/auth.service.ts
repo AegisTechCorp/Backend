@@ -12,9 +12,9 @@ import { RefreshToken } from './entities/refresh-token.entity';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import {
-  hashAuthHash,
-  verifyAuthHash,
-  isValidAuthHashFormat,
+  hashPassword,
+  verifyPassword,
+  generateVaultSalt,
 } from './utils/crypto.utils';
 import * as crypto from 'crypto';
 
@@ -31,19 +31,14 @@ export class AuthService {
   ) {}
 
   /**
-   * Inscription d'un nouvel utilisateur avec architecture Zero-Knowledge
-   * @param registerDto - Données d'inscription
-   * @returns Tokens JWT (access + refresh) et utilisateur
+   * Inscription d'un nouvel utilisateur avec architecture Hybride
+   * (Authentification classique + Vault Zero-Knowledge)
+   *
+   * @param registerDto - Données d'inscription (email, password)
+   * @returns Tokens JWT (access + refresh), utilisateur et vault_salt
    */
   async register(registerDto: RegisterDto) {
-    const { email, authHash, firstName, lastName, dateOfBirth } = registerDto;
-
-    // Validation du format de l'authHash
-    if (!isValidAuthHashFormat(authHash)) {
-      throw new UnauthorizedException(
-        "Format d'authHash invalide. Assurez-vous d'utiliser le bon algorithme côté client.",
-      );
-    }
+    const { email, password, firstName, lastName, dateOfBirth } = registerDto;
 
     // Vérifier si l'utilisateur existe déjà
     const existingUser = await this.userRepository.findOne({ where: { email } });
@@ -51,13 +46,17 @@ export class AuthService {
       throw new ConflictException('Un utilisateur avec cet email existe déjà');
     }
 
-    // Hasher l'authHash avec Argon2id (double hashage pour sécurité maximale)
-    const finalHash = await hashAuthHash(authHash);
+    // 1. Hasher le mot de passe avec Argon2id pour l'authentification
+    const passwordHash = await hashPassword(password);
 
-    // Créer l'utilisateur
+    // 2. Générer un sel aléatoire pour le vault (dérivation client-side)
+    const vaultSalt = generateVaultSalt();
+
+    // 3. Créer l'utilisateur
     const user = this.userRepository.create({
       email,
-      authHash: finalHash,
+      passwordHash,
+      vaultSalt,
       firstName,
       lastName,
       dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
@@ -65,36 +64,33 @@ export class AuthService {
 
     await this.userRepository.save(user);
 
-    // Générer les tokens JWT
+    // 4. Générer les tokens JWT
     const tokens = await this.generateTokens(user);
 
     return {
       user: user.toJSON(),
+      vaultSalt, // Retourner le salt au client pour dérivation de la masterKey
       ...tokens,
     };
   }
 
   /**
-   * Connexion d'un utilisateur avec architecture Zero-Knowledge
-   * @param loginDto - Données de connexion
+   * Connexion d'un utilisateur avec architecture Hybride
+   * (Authentification classique + Vault Zero-Knowledge)
+   *
+   * @param loginDto - Données de connexion (email, password)
    * @param ipAddress - Adresse IP du client (optionnel, pour tracking)
    * @param userAgent - User agent du client (optionnel, pour tracking)
-   * @returns Tokens JWT (access + refresh) et utilisateur
+   * @returns Tokens JWT (access + refresh), utilisateur et vault_salt
    */
   async login(loginDto: LoginDto, ipAddress?: string, userAgent?: string) {
-    const { email, authHash } = loginDto;
-
-    // Validation du format de l'authHash
-    if (!isValidAuthHashFormat(authHash)) {
-      throw new UnauthorizedException(
-        "Format d'authHash invalide. Assurez-vous d'utiliser le bon algorithme côté client.",
-      );
-    }
+    const { email, password } = loginDto;
 
     // Trouver l'utilisateur
     const user = await this.userRepository.findOne({ where: { email } });
     if (!user) {
-      throw new UnauthorizedException('Email ou mot de passe incorrect');
+      // Message générique pour éviter l'énumération d'utilisateurs (User Enumeration)
+      throw new UnauthorizedException('Identifiants invalides');
     }
 
     // Vérifier si l'utilisateur est actif
@@ -102,10 +98,10 @@ export class AuthService {
       throw new UnauthorizedException('Votre compte est désactivé');
     }
 
-    // Vérifier l'authHash avec Argon2
-    const isValid = await verifyAuthHash(user.authHash, authHash);
+    // Vérifier le mot de passe avec Argon2
+    const isValid = await verifyPassword(user.passwordHash, password);
     if (!isValid) {
-      throw new UnauthorizedException('Email ou mot de passe incorrect');
+      throw new UnauthorizedException('Identifiants invalides');
     }
 
     // Générer les tokens JWT
@@ -113,6 +109,7 @@ export class AuthService {
 
     return {
       user: user.toJSON(),
+      vaultSalt: user.vaultSalt, // Retourner le salt pour dérivation de la masterKey
       ...tokens,
     };
   }
