@@ -10,12 +10,18 @@ import {
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { ConfigService } from '@nestjs/config';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 
+/**
+ * Contrôleur d'authentification avec architecture Zero-Knowledge
+ *
+ * Le serveur reçoit un authHash (déjà hashé côté client avec SHA-256)
+ * et ne voit JAMAIS le mot de passe ou la masterKey de l'utilisateur.
+ */
 @ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
@@ -26,6 +32,12 @@ export class AuthController {
 
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Inscription d\'un nouvel utilisateur (Zero-Knowledge)',
+    description: 'Crée un compte utilisateur. Le client doit envoyer un authHash dérivé du mot de passe, jamais le mot de passe en clair.',
+  })
+  @ApiResponse({ status: 201, description: 'Utilisateur créé avec succès' })
+  @ApiResponse({ status: 409, description: 'Email déjà utilisé' })
   async register(
     @Body() registerDto: RegisterDto,
     @Res({ passthrough: true }) response: Response,
@@ -43,6 +55,12 @@ export class AuthController {
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Connexion d\'un utilisateur (Zero-Knowledge)',
+    description: 'Authentifie un utilisateur. Le client doit envoyer un authHash dérivé du mot de passe.',
+  })
+  @ApiResponse({ status: 200, description: 'Connexion réussie' })
+  @ApiResponse({ status: 401, description: 'Identifiants invalides' })
   async login(
     @Body() loginDto: LoginDto,
     @Req() request: Request,
