@@ -1,67 +1,55 @@
 import * as argon2 from 'argon2';
-import { createHash } from 'crypto';
+import { createHash, randomBytes } from 'crypto';
+
 
 /**
- * Utilitaires cryptographiques pour l'architecture Zero-Knowledge
+ * Hashe un mot de passe avec Argon2id pour stockage sécurisé
+ * Utilisé pour l'AUTHENTIFICATION (vérification du mot de passe)
  *
- * Architecture:
- * 1. Client dérive masterKey (pour chiffrement) et authKey (pour authentification) depuis le password
- * 2. Client hashe l'authKey avec SHA-256 avant envoi -> authHash
- * 3. Serveur reçoit authHash et le hashe avec Argon2id pour stockage -> finalHash
- * 4. La masterKey ne quitte jamais le client
- */
-
-/**
- * Hashe l'authHash reçu du client avec Argon2id pour stockage sécurisé
- * @param authHash - Hash de l'authKey envoyé par le client (déjà hashé avec SHA-256)
+ * @param password - Mot de passe en clair
  * @returns Hash Argon2id prêt pour le stockage en base de données
  */
-export async function hashAuthHash(authHash: string): Promise<string> {
+export async function hashPassword(password: string): Promise<string> {
   try {
-    return await argon2.hash(authHash, {
+    return await argon2.hash(password, {
       type: argon2.argon2id,
       memoryCost: 65536, // 64 MB
       timeCost: 3,       // 3 itérations
       parallelism: 4,    // 4 threads
     });
   } catch (error) {
-    throw new Error('Erreur lors du hashage de l\'authHash');
+    throw new Error('Erreur lors du hashage du mot de passe');
   }
 }
 
 /**
- * Vérifie si l'authHash fourni correspond au hash stocké
+ * Vérifie si un mot de passe correspond au hash stocké
+ * Utilisé lors de la CONNEXION
+ *
  * @param storedHash - Hash Argon2id stocké en base de données
- * @param authHash - authHash envoyé par le client lors de la connexion
- * @returns true si l'authHash correspond, false sinon
+ * @param password - Mot de passe fourni par l'utilisateur
+ * @returns true si le mot de passe correspond, false sinon
  */
-export async function verifyAuthHash(
+export async function verifyPassword(
   storedHash: string,
-  authHash: string,
+  password: string,
 ): Promise<boolean> {
   try {
-    return await argon2.verify(storedHash, authHash);
+    return await argon2.verify(storedHash, password);
   } catch (error) {
     return false;
   }
 }
 
 /**
- * Utilitaire pour vérifier la validité du format d'un authHash
- * L'authHash doit être une chaîne base64 de 44 caractères (32 bytes encodés)
- * @param authHash - authHash à valider
- * @returns true si le format est valide
+ * Génère un salt aléatoire pour le vault (Zero-Knowledge)
+ * Ce salt est stocké côté serveur et retourné au client pour dériver la masterKey
+ *
+ * @returns Salt encodé en base64 (32 bytes)
  */
-export function isValidAuthHashFormat(authHash: string): boolean {
-  // L'authHash doit être une chaîne base64 valide
-  const base64Regex = /^[A-Za-z0-9+/]+=*$/;
-
-  // Un hash SHA-256 encodé en base64 fait 44 caractères
-  return (
-    typeof authHash === 'string' &&
-    authHash.length === 44 &&
-    base64Regex.test(authHash)
-  );
+export function generateVaultSalt(): string {
+  // Générer 32 bytes aléatoires (256 bits)
+  return randomBytes(32).toString('base64');
 }
 
 /**
