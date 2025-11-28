@@ -18,7 +18,6 @@ import {
 } from './utils/crypto.utils';
 import * as crypto from 'crypto';
 
-
 @Injectable()
 export class AuthService {
   constructor(
@@ -41,7 +40,9 @@ export class AuthService {
     const { email, password, firstName, lastName, dateOfBirth } = registerDto;
 
     // Vérifier si l'utilisateur existe déjà
-    const existingUser = await this.userRepository.findOne({ where: { email } });
+    const existingUser = await this.userRepository.findOne({
+      where: { email },
+    });
     if (existingUser) {
       throw new ConflictException('Un utilisateur avec cet email existe déjà');
     }
@@ -172,7 +173,11 @@ export class AuthService {
    * @param userAgent - User agent (optionnel)
    * @returns Access token et refresh token
    */
-  private async generateTokens(user: User, ipAddress?: string, userAgent?: string) {
+  private async generateTokens(
+    user: User,
+    ipAddress?: string,
+    userAgent?: string,
+  ) {
     const payload = { sub: user.id, email: user.email };
 
     // Access Token (courte durée)

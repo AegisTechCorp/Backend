@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { MedicalRecord } from './entities/medical-record.entity';
@@ -15,7 +19,10 @@ export class MedicalRecordsService {
   /**
    * Créer un nouveau dossier médical chiffré
    */
-  async create(userId: string, createMedicalRecordDto: CreateMedicalRecordDto): Promise<MedicalRecord> {
+  async create(
+    userId: string,
+    createMedicalRecordDto: CreateMedicalRecordDto,
+  ): Promise<MedicalRecord> {
     const medicalRecord = this.medicalRecordRepository.create({
       userId,
       ...createMedicalRecordDto,
@@ -57,7 +64,11 @@ export class MedicalRecordsService {
   /**
    * Mettre à jour un dossier médical
    */
-  async update(id: string, userId: string, updateMedicalRecordDto: UpdateMedicalRecordDto): Promise<MedicalRecord> {
+  async update(
+    id: string,
+    userId: string,
+    updateMedicalRecordDto: UpdateMedicalRecordDto,
+  ): Promise<MedicalRecord> {
     const record = await this.findOne(id, userId);
 
     Object.assign(record, updateMedicalRecordDto);
@@ -80,10 +91,13 @@ export class MedicalRecordsService {
   async getStatistics(userId: string): Promise<Record<string, number>> {
     const records = await this.findAll(userId);
 
-    const stats = records.reduce((acc, record) => {
-      acc[record.recordType] = (acc[record.recordType] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    const stats = records.reduce(
+      (acc, record) => {
+        acc[record.recordType] = (acc[record.recordType] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
 
     return stats;
   }

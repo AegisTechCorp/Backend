@@ -1,9 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  ForbiddenException,
-  BadRequestException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { FileAttachment } from './entities/file-attachment.entity';
@@ -149,7 +144,7 @@ export class FilesService {
     // Supprimer le fichier physique
     try {
       await fs.unlink(fullPath);
-    } catch (error) {
+    } catch {
       // Le fichier n'existe peut-être plus, on continue quand même
       console.warn(
         `Fichier ${file.filepath} introuvable sur le disque lors de la suppression`,
