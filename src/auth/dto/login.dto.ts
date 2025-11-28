@@ -9,6 +9,8 @@ export class LoginDto {
 
   @IsString({ message: 'Le mot de passe doit être une chaîne de caractères' })
   @MinLength(1, { message: 'Le mot de passe ne peut pas être vide' })
-  @MaxLength(128, { message: 'Le mot de passe ne peut pas dépasser 128 caractères' })
+  @MaxLength(128, {
+    message: 'Le mot de passe ne peut pas dépasser 128 caractères',
+  })
   password: string;
 }

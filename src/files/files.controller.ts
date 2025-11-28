@@ -59,7 +59,8 @@ export class FilesController {
         file: {
           type: 'string',
           format: 'binary',
-          description: 'Fichier CHIFFRÉ (déjà chiffré côté client avec AES-GCM)',
+          description:
+            'Fichier CHIFFRÉ (déjà chiffré côté client avec AES-GCM)',
         },
         encryptedFilename: {
           type: 'string',
@@ -100,7 +101,7 @@ export class FilesController {
 
   @Get('medical-records/:medicalRecordId')
   @ApiOperation({
-    summary: 'Récupérer tous les fichiers d\'un dossier médical',
+    summary: "Récupérer tous les fichiers d'un dossier médical",
   })
   @ApiResponse({ status: 200, description: 'Liste des fichiers' })
   @ApiResponse({ status: 401, description: 'Non authentifié' })
@@ -137,8 +138,10 @@ export class FilesController {
     @Param('fileId') fileId: string,
     @Res() response: Response,
   ) {
-    const { filepath, mimeType, filename } =
-      await this.filesService.downloadFile(user.id, fileId);
+    const { filepath, filename } = await this.filesService.downloadFile(
+      user.id,
+      fileId,
+    );
 
     // Envoyer le fichier chiffré
     response.setHeader('Content-Type', 'application/octet-stream');
@@ -158,10 +161,7 @@ export class FilesController {
   @ApiResponse({ status: 401, description: 'Non authentifié' })
   @ApiResponse({ status: 403, description: 'Accès interdit' })
   @ApiResponse({ status: 404, description: 'Fichier non trouvé' })
-  async deleteFile(
-    @CurrentUser() user: User,
-    @Param('fileId') fileId: string,
-  ) {
+  async deleteFile(@CurrentUser() user: User, @Param('fileId') fileId: string) {
     await this.filesService.deleteFile(user.id, fileId);
   }
 }
