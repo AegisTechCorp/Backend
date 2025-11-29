@@ -1,11 +1,11 @@
-echo "🔒 Running pre-push checks..."
-echo "📦 Running security audit..."
+echo " Running pre-push checks..."
+echo " Running security audit..."
 npm audit --audit-level=moderate || exit 1
 
-echo "🧪 Running tests..."
+echo " Running tests..."
 npm run test || exit 1
 
-echo "🏗️  Running build..."
+echo " Running build..."
 npm run build || exit 1
 
 echo "✅ All checks passed! Pushing..."

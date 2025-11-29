@@ -1,1 +1,11 @@
+# Scan for secrets in staged files
+echo "🔍 Scanning staged files for secrets..."
+if git diff --cached --diff-filter=ACM | grep -iE "(password\s*=|api_key\s*=|secret_key\s*=|private_key|token\s*=|Bearer\s+[A-Za-z0-9\-_]+)" | grep -v "mock" | grep -v "test" | grep -v "example"; then
+  echo " ERROR: Potential secret detected in staged files!"
+  echo "Please remove secrets before committing."
+  echo "Tip: Use environment variables or .env files (and add them to .gitignore)"
+  exit 1
+fi
+
+echo " Running tests..."
 npm test
