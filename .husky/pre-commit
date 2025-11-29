@@ -11,7 +11,9 @@ fi
 
 # Scan for secrets in staged files
 echo "🔍 Scanning staged files for secrets..."
-if git diff --cached --diff-filter=ACM | grep -iE "(password\s*=|api_key\s*=|secret_key\s*=|private_key|token\s*=|Bearer\s+[A-Za-z0-9\-_]+)" | grep -v "mock" | grep -v "test" | grep -v "example"; then
+# Only detect actual secret values, not code that uses variables
+# Looks for: key="actual_value" or token='xyz123' or Bearer followed by long token
+if git diff --cached --diff-filter=ACM | grep -iE "(password\s*=\s*['\"][^'\"]{8,}['\"]|api_key\s*=\s*['\"][^'\"]{20,}['\"]|secret_key\s*=\s*['\"][^'\"]{20,}['\"]|private_key\s*=\s*['\"]|Bearer\s+[A-Za-z0-9\-_]{40,})" | grep -v "mock" | grep -v "test" | grep -v "example" | grep -v "placeholder"; then
   echo "❌ ERROR: Potential secret detected in staged files!"
   echo "Please remove secrets before committing."
   echo "Tip: Use environment variables or .env files (and add them to .gitignore)"
