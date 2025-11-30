@@ -6,7 +6,6 @@ import {
   HttpStatus,
   Req,
   Res,
-  UseGuards,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { ConfigService } from '@nestjs/config';
@@ -33,8 +32,9 @@ export class AuthController {
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
-    summary: 'Inscription d\'un nouvel utilisateur (Zero-Knowledge)',
-    description: 'Crée un compte utilisateur. Le client doit envoyer un authHash dérivé du mot de passe, jamais le mot de passe en clair.',
+    summary: "Inscription d'un nouvel utilisateur (Zero-Knowledge)",
+    description:
+      'Crée un compte utilisateur. Le client doit envoyer un authHash dérivé du mot de passe, jamais le mot de passe en clair.',
   })
   @ApiResponse({ status: 201, description: 'Utilisateur créé avec succès' })
   @ApiResponse({ status: 409, description: 'Email déjà utilisé' })
@@ -57,8 +57,9 @@ export class AuthController {
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Connexion d\'un utilisateur (Zero-Knowledge)',
-    description: 'Authentifie un utilisateur. Le client doit envoyer un authHash dérivé du mot de passe.',
+    summary: "Connexion d'un utilisateur (Zero-Knowledge)",
+    description:
+      'Authentifie un utilisateur. Le client doit envoyer un authHash dérivé du mot de passe.',
   })
   @ApiResponse({ status: 200, description: 'Connexion réussie' })
   @ApiResponse({ status: 401, description: 'Identifiants invalides' })
@@ -88,7 +89,9 @@ export class AuthController {
     @Body() refreshTokenDto: RefreshTokenDto,
     @Res({ passthrough: true }) response: Response,
   ) {
-    const result = await this.authService.refreshTokens(refreshTokenDto.refreshToken);
+    const result = await this.authService.refreshTokens(
+      refreshTokenDto.refreshToken,
+    );
 
     // Stocker le nouveau refresh token
     this.setRefreshTokenCookie(response, result.refreshToken);
@@ -115,7 +118,12 @@ export class AuthController {
 
   // Méthode privée pour configurer le cookie du refresh token
   private setRefreshTokenCookie(response: Response, refreshToken: string) {
-    const cookieConfig = this.configService.get('jwt.cookie');
+    const cookieConfig = this.configService.get('jwt.cookie') as {
+      httpOnly: boolean;
+      secure: boolean;
+      sameSite: 'strict' | 'lax' | 'none';
+      maxAge: number;
+    };
 
     response.cookie('refreshToken', refreshToken, {
       httpOnly: cookieConfig.httpOnly,

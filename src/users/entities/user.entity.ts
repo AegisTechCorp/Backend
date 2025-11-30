@@ -54,6 +54,7 @@ export class User {
 
   // Méthode pour retourner l'utilisateur sans les données sensibles
   toJSON() {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { passwordHash, recoveryKeyHash, ...user } = this;
     return user;
   }

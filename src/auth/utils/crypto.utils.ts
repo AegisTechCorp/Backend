@@ -1,7 +1,6 @@
 import * as bcrypt from 'bcrypt';
 import { createHash, randomBytes } from 'crypto';
 
-
 /**
  * Hashe un mot de passe avec Bcrypt pour stockage sécurisé
  * Utilisé pour l'AUTHENTIFICATION
@@ -10,14 +9,14 @@ import { createHash, randomBytes } from 'crypto';
  * - saltRounds: 12 (2^12 = 4096 itérations, recommandé en 2024)
  * - Génère automatiquement un salt aléatoire unique par hash
  *
- * @param password 
+ * @param password
  * @returns Hash Bcrypt prêt pour le stockage en base de données
  */
 export async function hashPassword(password: string): Promise<string> {
   try {
     const saltRounds = 12; // 2^12 = 4096 itérations
     return await bcrypt.hash(password, saltRounds);
-  } catch (error) {
+  } catch {
     throw new Error('Erreur lors du hashage du mot de passe');
   }
 }
@@ -36,7 +35,7 @@ export async function verifyPassword(
 ): Promise<boolean> {
   try {
     return await bcrypt.compare(password, storedHash);
-  } catch (error) {
+  } catch {
     return false;
   }
 }
@@ -88,7 +87,7 @@ export async function verifyRecoveryKey(
 ): Promise<boolean> {
   try {
     return await bcrypt.compare(recoveryKey, storedHash);
-  } catch (error) {
+  } catch {
     return false;
   }
 }

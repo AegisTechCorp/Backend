@@ -28,30 +28,42 @@ async function bootstrap() {
   app.use(cookieParser());
 
   // CORS Configuration
-  const corsConfig = configService.get('security.cors');
+  const corsConfig = configService.get('security.cors') as {
+    origin: string | string[];
+    credentials: boolean;
+  };
   app.enableCors(corsConfig);
 
   // Security Headers
-  app.use((req, res, next) => {
-    // Protection XSS
-    res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('X-Frame-Options', 'DENY');
-    res.setHeader('X-XSS-Protection', '1; mode=block');
+  app.use(
+    (
+      req: { path?: string },
+      res: { setHeader: (key: string, value: string) => void },
+      next: () => void,
+    ) => {
+      // Protection XSS
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.setHeader('X-Frame-Options', 'DENY');
+      res.setHeader('X-XSS-Protection', '1; mode=block');
 
-    // CSP - Assouplir pour Swagger
-    if (!req.path.startsWith('/api/docs')) {
-      res.setHeader(
-        'Content-Security-Policy',
-        "default-src 'none'; frame-ancestors 'none'",
-      );
-      // Disable caching for sensitive endpoints
-      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-      res.setHeader('Pragma', 'no-cache');
-      res.setHeader('Expires', '0');
-    }
+      // CSP - Assouplir pour Swagger
+      if (!req.path?.startsWith('/api/docs')) {
+        res.setHeader(
+          'Content-Security-Policy',
+          "default-src 'none'; frame-ancestors 'none'",
+        );
+        // Disable caching for sensitive endpoints
+        res.setHeader(
+          'Cache-Control',
+          'no-store, no-cache, must-revalidate, proxy-revalidate',
+        );
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+      }
 
-    next();
-  });
+      next();
+    },
+  );
 
   // Global prefix pour toutes les routes API
   app.setGlobalPrefix('api/v1');
@@ -61,8 +73,8 @@ async function bootstrap() {
     .setTitle('Aegis API')
     .setDescription(
       'API Zero-Knowledge pour la gestion sécurisée des dossiers médicaux.\n\n' +
-      '**Principe de sécurité :** Toutes les données sensibles sont chiffrées côté client (AES-GCM) avant d\'être envoyées au serveur. ' +
-      'Le backend ne stocke que des blobs chiffrés et ne peut jamais accéder aux données en clair.',
+        "**Principe de sécurité :** Toutes les données sensibles sont chiffrées côté client (AES-GCM) avant d'être envoyées au serveur. " +
+        'Le backend ne stocke que des blobs chiffrés et ne peut jamais accéder aux données en clair.',
     )
     .setVersion('1.0')
     .addBearerAuth(
@@ -76,8 +88,14 @@ async function bootstrap() {
       },
       'JWT-auth',
     )
-    .addTag('Authentication', 'Endpoints pour l\'inscription, connexion et gestion des tokens')
-    .addTag('Medical Records', 'Endpoints pour la gestion des dossiers médicaux chiffrés')
+    .addTag(
+      'Authentication',
+      "Endpoints pour l'inscription, connexion et gestion des tokens",
+    )
+    .addTag(
+      'Medical Records',
+      'Endpoints pour la gestion des dossiers médicaux chiffrés',
+    )
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
@@ -100,4 +118,4 @@ async function bootstrap() {
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 }
 
-bootstrap();
+void bootstrap();

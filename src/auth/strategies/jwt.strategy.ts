@@ -13,20 +13,27 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
   ) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+    const extractJwt = ExtractJwt.fromAuthHeaderAsBearerToken() as (
+      req: unknown,
+    ) => string | null;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      jwtFromRequest: extractJwt,
       secretOrKey: configService.get<string>('jwt.accessToken.secret'),
       ignoreExpiration: false,
     });
   }
 
   async validate(payload: { sub: string; email: string }) {
-    const user = await this.userRepository.findOne({ where: { id: payload.sub } });
+    const user = await this.userRepository.findOne({
+      where: { id: payload.sub },
+    });
 
     if (!user || !user.isActive) {
       throw new UnauthorizedException('Utilisateur introuvable ou désactivé');
     }
 
-    return user; 
+    return user;
   }
 }

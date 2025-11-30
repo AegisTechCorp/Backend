@@ -10,7 +10,12 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { MedicalRecordsService } from './medical-records.service';
 import { CreateMedicalRecordDto } from './dto/create-medical-record.dto';
 import { UpdateMedicalRecordDto } from './dto/update-medical-record.dto';
@@ -33,11 +38,16 @@ export class MedicalRecordsController {
     @CurrentUser() user: User,
     @Body() createMedicalRecordDto: CreateMedicalRecordDto,
   ) {
-    return await this.medicalRecordsService.create(user.id, createMedicalRecordDto);
+    return await this.medicalRecordsService.create(
+      user.id,
+      createMedicalRecordDto,
+    );
   }
 
   @Get()
-  @ApiOperation({ summary: 'Récupérer tous les dossiers médicaux de l\'utilisateur' })
+  @ApiOperation({
+    summary: "Récupérer tous les dossiers médicaux de l'utilisateur",
+  })
   @ApiResponse({ status: 200, description: 'Liste des dossiers médicaux' })
   @ApiResponse({ status: 401, description: 'Non authentifié' })
   async findAll(@CurrentUser() user: User) {
@@ -73,7 +83,11 @@ export class MedicalRecordsController {
     @CurrentUser() user: User,
     @Body() updateMedicalRecordDto: UpdateMedicalRecordDto,
   ) {
-    return await this.medicalRecordsService.update(id, user.id, updateMedicalRecordDto);
+    return await this.medicalRecordsService.update(
+      id,
+      user.id,
+      updateMedicalRecordDto,
+    );
   }
 
   @Delete(':id')
