@@ -1,98 +1,380 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Aegis API - Backend Zero-Knowledge
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+API backend pour l'application Aegis, une plateforme de gestion de dossiers médicaux avec architecture **Zero-Knowledge** garantissant que même les administrateurs ne peuvent pas lire les données des utilisateurs.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Table des matières
 
-## Description
+1. [À propos du projet](#à-propos-du-projet)
+2. [Architecture Zero-Knowledge](#architecture-zero-knowledge)
+3. [Technologies utilisées](#technologies-utilisées)
+4. [Prérequis](#prérequis)
+5. [Installation](#installation)
+6. [Configuration](#configuration)
+7. [Démarrage](#démarrage)
+8. [Structure du projet](#structure-du-projet)
+9. [API Endpoints](#api-endpoints)
+10. [Sécurité](#sécurité)
+11. [Tests](#tests)
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+---
 
-## Project setup
+## À propos du projet
+
+**Aegis** est une application HealthTech qui permet aux utilisateurs de stocker et gérer leurs dossiers médicaux en toute sécurité. La particularité d'Aegis est son architecture **Zero-Knowledge** : toutes les données sensibles sont chiffrées côté client avant d'être envoyées au serveur, garantissant une confidentialité maximale.
+
+### Fonctionnalités principales
+
+- Authentification sécurisée avec architecture Zero-Knowledge
+- Gestion de dossiers médicaux chiffrés de bout en bout (E2EE)
+- Upload et téléchargement de fichiers médicaux chiffrés
+- Statistiques sur les dossiers médicaux
+- Protection contre les attaques IDOR, XSS, injection SQL
+- Rate limiting et sécurité renforcée
+
+---
+
+## Architecture Hybride : Authentification + Zero-Knowledge
+
+### Approche en Deux Couches
+
+L'architecture combine deux systèmes complémentaires :
+
+**1. Authentification Classique (Bcrypt)**
+- Le mot de passe est hashé avec **Bcrypt** (12 rounds) pour l'authentification
+- Permet de vérifier l'identité de l'utilisateur lors de la connexion
+- Stocké sécurisé en base de données
+
+**2. Vault Zero-Knowledge (Chiffrement E2EE)**
+- Les données sensibles sont chiffrées côté client avec une `masterKey`
+- La `masterKey` est dérivée du mot de passe + vaultSalt (PBKDF2)
+- Le serveur ne peut **JAMAIS** déchiffrer les données de l'utilisateur
+- En cas de compromission du serveur, les données restent protégées
+
+
+## Technologies utilisées
+
+### Framework et runtime
+
+- **Node.js** (v18+)
+- **NestJS** 11.x - Framework backend TypeScript
+- **TypeScript** 5.x
+
+### Base de données
+
+- **PostgreSQL** 15+ - Base de données relationnelle
+- **TypeORM** 0.3.x - ORM pour TypeScript
+
+### Sécurité
+
+- **Bcrypt** - Hash des mots de passe pour authentification (12 rounds)
+- **JWT (JsonWebToken)** - Authentification stateless
+- **Passport** - Middleware d'authentification
+- **cookie-parser** - Gestion sécurisée des cookies HttpOnly
+
+### Upload de fichiers
+
+- **Multer** - Gestion des uploads multipart/form-data
+
+### Documentation
+
+- **Swagger (OpenAPI)** - Documentation interactive de l'API
+
+---
+
+## Prérequis
+
+- **Node.js** 18+ et **npm** 9+
+- **PostgreSQL** 15+
+- **Git**
+
+---
+
+## Installation
+
+### 1. Cloner le projet
 
 ```bash
-$ npm install
+git clone <url-du-repo>
+cd backend
 ```
 
-## Compile and run the project
+### 2. Installer les dépendances
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+npm install
 ```
 
-## Run tests
+### 3. Configurer la base de données
+
+Créer une base de données PostgreSQL :
 
 ```bash
-# unit tests
-$ npm run test
+# Se connecter à PostgreSQL
+psql -U postgres
 
-# e2e tests
-$ npm run test:e2e
+# Créer la base de données
+CREATE DATABASE aegis_db;
 
-# test coverage
-$ npm run test:cov
+# Créer un utilisateur (optionnel)
+CREATE USER aegis_user WITH PASSWORD 'votre_mot_de_passe';
+GRANT ALL PRIVILEGES ON DATABASE aegis_db TO aegis_user;
 ```
 
-## Deployment
+---
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+## Configuration
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+### Variables d'environnement
+
+Créer un fichier `.env.local` à la racine du projet :
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+cp .env.example .env.local
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+Éditer `.env.local` avec vos valeurs :
 
-## Resources
+```env
+# Environment
+NODE_ENV=development
 
-Check out a few resources that may come in handy when working with NestJS:
+# Server
+PORT=3000
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+# Database
+DATABASE_HOST=localhost
+DATABASE_PORT=5432
+DATABASE_USER=aegis_user
+DATABASE_PASSWORD=votre_mot_de_passe
+DATABASE_NAME=aegis_db
+DATABASE_SSL=false
 
-## Support
+# JWT Secrets (CHANGEZ-LES EN PRODUCTION!)
+JWT_ACCESS_SECRET=votre-secret-access-token-tres-securise
+JWT_REFRESH_SECRET=votre-secret-refresh-token-tres-securise
+JWT_ACCESS_EXPIRES_IN=15m
+JWT_REFRESH_EXPIRES_IN=7d
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+# Frontend URL (pour CORS)
+FRONTEND_URL=http://localhost:5173
+```
 
-## Stay in touch
+**IMPORTANT** : Changez les secrets JWT en production avec des valeurs aléatoires fortes :
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+```bash
+# Générer des secrets forts
+node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+```
 
-## License
+---
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+## Démarrage
+
+### Mode développement
+
+```bash
+npm run start:dev
+```
+
+L'API sera accessible sur `http://localhost:3000`
+
+### Mode production
+
+```bash
+# Build
+npm run build
+
+# Démarrer
+npm run start:prod
+```
+
+### Accéder à la documentation Swagger
+
+Ouvrir `http://localhost:3000/api` dans votre navigateur pour voir la documentation interactive de l'API.
+
+---
+
+## Structure du projet
+
+```
+src/
+├── auth/                       # Module d'authentification
+│   ├── controllers/
+│   │   └── auth.controller.ts  # Endpoints: register, login, refresh, logout
+│   ├── dto/                    # DTOs de validation
+│   ├── entities/
+│   │   └── refresh-token.entity.ts
+│   ├── guards/
+│   │   └── jwt-auth.guard.ts   # Protection des routes
+│   ├── strategies/
+│   │   └── jwt.strategy.ts
+│   ├── utils/
+│   │   └── crypto.utils.ts     # Utilitaires Argon2
+│   ├── auth.module.ts
+│   └── auth.service.ts         # Logique métier auth
+│
+├── users/                      # Module utilisateurs
+│   ├── entities/
+│   │   └── user.entity.ts      # Entité User (authHash, vaultSalt)
+│   ├── users.service.ts
+│   └── users.module.ts
+│
+├── medical-records/            # Module dossiers médicaux
+│   ├── controllers/
+│   │   └── medical-records.controller.ts
+│   ├── dto/
+│   ├── entities/
+│   │   └── medical-record.entity.ts  # Données chiffrées
+│   ├── medical-records.service.ts
+│   └── medical-records.module.ts
+│
+├── files/                      # Module fichiers chiffrés
+│   ├── controllers/
+│   │   └── files.controller.ts
+│   ├── dto/
+│   ├── entities/
+│   │   └── file-attachment.entity.ts
+│   ├── services/
+│   │   ├── files.service.ts
+│   │   └── file-encryption.service.ts  # Stockage sécurisé
+│   └── files.module.ts
+│
+├── config/                     # Configuration
+│   ├── database.config.ts
+│   ├── jwt.config.ts
+│   └── security.config.ts
+│
+├── app.module.ts               # Module racine
+└── main.ts                     # Point d'entrée
+```
+
+---
+
+## API Endpoints
+
+### Documentation complète
+
+Voir la documentation Swagger interactive : `http://localhost:3000/api`
+
+### Authentification
+
+| Méthode | Endpoint | Description |
+|---------|----------|-------------|
+| POST | `/auth/register` | Inscription (reçoit authHash) |
+| POST | `/auth/login` | Connexion (reçoit authHash) |
+| POST | `/auth/refresh` | Rafraîchir les tokens |
+| POST | `/auth/logout` | Déconnexion |
+
+### Dossiers médicaux
+
+| Méthode | Endpoint | Description | Auth |
+|---------|----------|-------------|------|
+| POST | `/medical-records` | Créer un dossier chiffré | JWT |
+| GET | `/medical-records` | Liste des dossiers de l'utilisateur | JWT |
+| GET | `/medical-records/statistics` | Statistiques par type | JWT |
+| GET | `/medical-records/:id` | Détails d'un dossier | JWT |
+| PATCH | `/medical-records/:id` | Modifier un dossier | JWT |
+| DELETE | `/medical-records/:id` | Supprimer un dossier | JWT |
+
+### Fichiers
+
+| Méthode | Endpoint | Description | Auth |
+|---------|----------|-------------|------|
+| POST | `/files/medical-records/:id/upload` | Upload fichier chiffré | JWT |
+| GET | `/files/medical-records/:id` | Liste des fichiers | JWT |
+| GET | `/files/:id/download` | Télécharger un fichier | JWT |
+| DELETE | `/files/:id` | Supprimer un fichier | JWT |
+
+### Exemples de requêtes
+
+#### Inscription
+
+```bash
+curl -X POST http://localhost:3000/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "password": "MotDePasseSecurise123!",
+    "firstName": "John",
+    "lastName": "Doe"
+  }'
+```
+
+**Note** : Le mot de passe est envoyé en clair (via HTTPS). Le serveur le hashe avec Bcrypt.
+
+#### Connexion
+
+```bash
+curl -X POST http://localhost:3000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "password": "MotDePasseSecurise123!"
+  }'
+```
+
+#### Créer un dossier médical
+
+```bash
+curl -X POST http://localhost:3000/medical-records \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <access_token>" \
+  -d '{
+    "type": "prescription",
+    "encryptedData": "U2FsdGVkX1...",
+    "encryptedIv": "aGVsbG93b3JsZA=="
+  }'
+```
+
+---
+
+## Sécurité
+
+### Mesures de sécurité implémentées
+
+#### 1. Authentification Hybride (Bcrypt + Zero-Knowledge Vault)
+
+- Authentification : Bcrypt (12 rounds) pour hasher les mots de passe
+- Chiffrement E2EE : masterKey dérivée avec PBKDF2 (100 000 itérations)
+- Séparation : password (auth) / masterKey (chiffrement données)
+
+#### 2. Protection des tokens
+
+- Access Token : JWT, durée courte (15min)
+- Refresh Token : Stocké en base, rotation à usage unique
+- Cookies HttpOnly, Secure, SameSite=Strict
+
+#### 3. Validation des données
+
+- DTOs avec `class-validator`
+- Whitelist stricte (`whitelist: true`)
+- Validation du format authHash (44 caractères base64)
+
+#### 4. Protection contre les attaques courantes
+
+- **IDOR** : Vérification userId sur toutes les requêtes
+- **XSS** : Headers de sécurité, sanitization côté client
+- **Injection SQL** : ORM TypeORM (requêtes paramétrées)
+- **CSRF** : Cookies SameSite=Strict
+- **Bruteforce** : Rate limiting (à configurer)
+
+#### 5. Chiffrement des données
+
+- Données médicales : Chiffrées côté client (AES-GCM)
+- Fichiers : Stockés chiffrés sur disque
+- Base de données : Données illisibles sans masterKey
+
+## Tests
+
+### Lancer les tests unitaires
+
+```bash
+npm run test
+```
+
+### Lancer les tests e2e
+
+```bash
+npm run test:e2e
+```
+
