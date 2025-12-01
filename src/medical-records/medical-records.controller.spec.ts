@@ -4,8 +4,9 @@ import { MedicalRecordsService } from './medical-records.service';
 
 describe('MedicalRecordsController', () => {
   let controller: MedicalRecordsController;
+  let service: MedicalRecordsService;
 
-  const mockService = {
+  const mockMedicalRecordsService = {
     create: jest.fn(),
     findAll: jest.fn(),
     findOne: jest.fn(),
@@ -20,12 +21,15 @@ describe('MedicalRecordsController', () => {
       providers: [
         {
           provide: MedicalRecordsService,
-          useValue: mockService,
+          useValue: mockMedicalRecordsService,
         },
       ],
     }).compile();
 
     controller = module.get<MedicalRecordsController>(MedicalRecordsController);
+    service = module.get<MedicalRecordsService>(MedicalRecordsService);
+
+    jest.clearAllMocks();
   });
 
   it('should be defined', () => {
