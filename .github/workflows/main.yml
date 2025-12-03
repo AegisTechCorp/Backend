@@ -65,8 +65,8 @@ jobs:
           context: .
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/backend:latest
-            ghcr.io/${{ github.repository_owner }}/backend:${{ github.sha }}
+            ghcr.io/aegistechcorp/backend:latest
+            ghcr.io/aegistechcorp/backend:${{ github.sha }}
           build-args: |
             NODE_ENV=production
 
