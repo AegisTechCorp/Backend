@@ -3,6 +3,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
@@ -11,6 +12,9 @@ async function bootstrap() {
   });
 
   const configService = app.get(ConfigService);
+
+  // Global Logging Interceptor (logs sécurisés sans données sensibles)
+  app.useGlobalInterceptors(new LoggingInterceptor());
 
   // Global Validation Pipe (protection contre les injections)
   app.useGlobalPipes(
@@ -50,7 +54,7 @@ async function bootstrap() {
       if (!req.path?.startsWith('/api/docs')) {
         res.setHeader(
           'Content-Security-Policy',
-          "default-src 'none'; frame-ancestors 'none'",
+          "default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; form-action 'none'; frame-ancestors 'none'; base-uri 'none'; object-src 'none'",
         );
         // Disable caching for sensitive endpoints
         res.setHeader(
