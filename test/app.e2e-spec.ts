@@ -31,10 +31,14 @@ describe('AppController (e2e)', () => {
     }
   });
 
-  it('/ (GET) - should return Hello World message', () => {
+  it('/ (GET) - should return API status', () => {
     return request(app.getHttpServer())
       .get('/api/v1')
       .expect(200)
-      .expect('Hello World! v42');
+      .expect((res) => {
+        expect(res.body).toHaveProperty('status', 'ok');
+        expect(res.body).toHaveProperty('message');
+        expect(res.body).toHaveProperty('version');
+      });
   });
 });
