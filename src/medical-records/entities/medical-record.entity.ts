@@ -66,8 +66,8 @@ export class MedicalRecord {
       userId: this.userId,
       encryptedData: this.encryptedData,
       recordType: this.recordType,
-      encryptedTitle: this.encryptedTitle,
-      metadata: this.metadata,
+      encryptedTitle: this.encryptedTitle || null,
+      metadata: this.metadata || null,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
     };

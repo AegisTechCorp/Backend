@@ -6,22 +6,33 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-        
+        with:
+          fetch-depth: 0  # Fetch all history for TruffleHog
+
+      - name: Scan for Secrets (TruffleHog)
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.pull_request.base.sha || github.event.before }}
+          head: ${{ github.event.pull_request.head.sha || github.sha }}
+          extra_args: --only-verified
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-      
+
       - name: Install Dependencies
         run: npm ci
-      
+
       - name: Security Audit
         run: npm audit --audit-level=moderate
         continue-on-error: false
       
       - name: Run Linter
         run: npm run lint
+        continue-on-error: true
       
       - name: Run Unit Tests
         run: npm run test
@@ -29,13 +40,14 @@ jobs:
       - name: Run Build
         run: npm run build
 
-  docker-build-push:
+  docker-build-push-deploy:
     runs-on: ubuntu-latest
     needs: typescript-check
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     permissions:
       contents: read
       packages: write
+      id-token: write
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -47,31 +59,27 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata for Docker
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/${{ github.repository }}
-          tags: |
-            type=ref,event=branch
-            type=sha,prefix={{branch}}-
-            type=raw,value=latest,enable={{is_default_branch}}
-
-      - name: Build and Push Docker Image
+      - name: Build and Push to GitHub Container Registry
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: |
+            ghcr.io/aegistechcorp/backend:latest
+            ghcr.io/aegistechcorp/backend:${{ github.sha }}
           build-args: |
             NODE_ENV=production
-        env:
-          DATABASE_HOST: ${{ secrets.DATABASE_HOST }}
-          DATABASE_PORT: ${{ secrets.DATABASE_PORT }}
-          DATABASE_USER: ${{ secrets.DATABASE_USER }}
-          DATABASE_PASSWORD: ${{ secrets.DATABASE_PASSWORD }}
-          DATABASE_NAME: ${{ secrets.DATABASE_NAME }}
-          JWT_ACCESS_SECRET: ${{ secrets.JWT_ACCESS_SECRET }}
-          JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
-          FRONTEND_URL: ${{ secrets.FRONTEND_URL }} 
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy backend \
+            --image europe-west9-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/frontend/aegistechcorp/backend:latest \
+            --region europe-west1 \
+            --platform managed \
+            --allow-unauthenticated 

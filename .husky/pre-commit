@@ -1,0 +1,24 @@
+# Check for sensitive files
+echo "🔍 Checking for sensitive files..."
+SENSITIVE_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E "\.env$|\.env\.|credentials\.json|secrets\.json|\.pem$|\.key$|\.p12$|\.pfx$|id_rsa|\.aws/credentials" || true)
+if [ -n "$SENSITIVE_FILES" ]; then
+  echo "❌ ERROR: Sensitive files detected in commit!"
+  echo "$SENSITIVE_FILES"
+  echo "These files should NEVER be committed!"
+  echo "Tip: Add them to .gitignore"
+  exit 1
+fi
+
+# Scan for secrets in staged files
+echo "🔍 Scanning staged files for secrets..."
+# Only detect actual secret values, not code that uses variables
+# Looks for: key="actual_value" or token='xyz123' or Bearer followed by long token
+if git diff --cached --diff-filter=ACM | grep -iE "(password\s*=\s*['\"][^'\"]{8,}['\"]|api_key\s*=\s*['\"][^'\"]{20,}['\"]|secret_key\s*=\s*['\"][^'\"]{20,}['\"]|private_key\s*=\s*['\"]|Bearer\s+[A-Za-z0-9\-_]{40,})" | grep -v "mock" | grep -v "test" | grep -v "example" | grep -v "placeholder"; then
+  echo "❌ ERROR: Potential secret detected in staged files!"
+  echo "Please remove secrets before committing."
+  echo "Tip: Use environment variables or .env files (and add them to .gitignore)"
+  exit 1
+fi
+
+echo "🧪 Running tests..."
+npm test

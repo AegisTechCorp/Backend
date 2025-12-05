@@ -24,7 +24,7 @@ export default registerAs('security', () => ({
 
   // CORS Configuration
   cors: {
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173', // à remplacer par URL du frontend React
+    origin: ['http://localhost:5173', 'https://frontend-333590095446.europe-west1.run.app'],
     credentials: true, // Permet l'envoi de cookies
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
