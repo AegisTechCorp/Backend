@@ -47,7 +47,7 @@ export class AuthService {
       throw new ConflictException('Un utilisateur avec cet email existe déjà');
     }
 
-    // 1. Hasher le mot de passe avec Argon2id pour l'authentification
+    // 1. Hasher le mot de passe avec Bcrypt pour l'authentification
     const passwordHash = await hashPassword(password);
 
     // 2. Générer un sel aléatoire pour le vault (dérivation client-side)
@@ -99,7 +99,7 @@ export class AuthService {
       throw new UnauthorizedException('Votre compte est désactivé');
     }
 
-    // Vérifier le mot de passe avec Argon2
+    // Vérifier le mot de passe avec Bcrypt
     const isValid = await verifyPassword(user.passwordHash, password);
     if (!isValid) {
       throw new UnauthorizedException('Identifiants invalides');
