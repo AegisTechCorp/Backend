@@ -46,6 +46,12 @@ export class User {
   @Column({ type: 'text', nullable: true })
   recoveryKeyHash: string; // Hash de la clé de récupération (à mettre en place si jamais)
 
+  @Column({ type: 'text', nullable: true })
+  twoFactorSecret: string; // Secret TOTP pour le 2FA (Base32)
+
+  @Column({ default: false })
+  twoFactorEnabled: boolean; // Si le 2FA est activé pour cet utilisateur
+
   @CreateDateColumn()
   createdAt: Date;
 
@@ -55,7 +61,7 @@ export class User {
   // Méthode pour retourner l'utilisateur sans les données sensibles
   toJSON() {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { passwordHash, recoveryKeyHash, ...user } = this;
+    const { passwordHash, recoveryKeyHash, twoFactorSecret, ...user } = this;
     return user;
   }
 }
