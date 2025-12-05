@@ -34,15 +34,15 @@ export class LoggingInterceptor implements NestInterceptor {
     const userAgent = request.get('user-agent') || 'Unknown';
     const startTime = Date.now();
 
-    // Nettoyer le body avant de logger
-    const sanitizedBody = this.sanitizeObject(body);
+    // Nettoyer le body avant de logger (gérer le cas où body est null/undefined pour les GET)
+    const sanitizedBody = body ? this.sanitizeObject(body) : {};
 
     // Log de la requête entrante (sans données sensibles)
     this.logger.log(
       `Incoming → ${method} ${url} | IP: ${ip} | UA: ${userAgent.substring(0, 50)}`,
     );
 
-    if (Object.keys(sanitizedBody).length > 0) {
+    if (sanitizedBody && Object.keys(sanitizedBody).length > 0) {
       this.logger.debug(`Body: ${JSON.stringify(sanitizedBody)}`);
     }
 
