@@ -1,0 +1,25 @@
+version: 2
+updates:
+  # Surveiller les dépendances npm
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Europe/Paris"
+    open-pull-requests-limit: 5  
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+
+  # Surveiller les GitHub Actions utilisées dans les workflows
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Europe/Paris"
+    commit-message:
+      prefix: "ci"
