@@ -24,12 +24,12 @@ import securityConfig from './config/security.config';
       cache: true,
     }),
 
-    // Rate Limiting (anti brute-force)
+  
     ThrottlerModule.forRoot([
       {
         name: 'default',
-        ttl: 60000, // 60 seconds
-        limit: 100, // 100 requests per minute 
+        ttl: 60000, 
+        limit: 100,  
       },
     ]),
 
@@ -51,7 +51,6 @@ import securityConfig from './config/security.config';
   controllers: [AppController],
   providers: [
     AppService,
-    // Apply rate limiting globally
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,

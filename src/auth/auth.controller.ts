@@ -31,7 +31,7 @@ export class AuthController {
   ) {}
 
   @Post('register')
-  @Throttle({ default: { limit: 10, ttl: 60000 } }) // 10 registrations per minute (anti-spam)
+  @Throttle({ default: { limit: 10, ttl: 60000 } }) 
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary: "Inscription d'un nouvel utilisateur (Zero-Knowledge)",
@@ -58,7 +58,7 @@ export class AuthController {
   }
 
   @Post('login')
-  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 login attempts per minute (anti brute-force)
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) 
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: "Connexion d'un utilisateur (Zero-Knowledge)",
@@ -89,7 +89,7 @@ export class AuthController {
   }
 
   @Post('refresh')
-  @Throttle({ default: { limit: 30, ttl: 60000 } }) // 30 refresh per minute (permissive, don't break sessions)
+  @Throttle({ default: { limit: 30, ttl: 60000 } }) 
   @HttpCode(HttpStatus.OK)
   async refresh(
     @Body() refreshTokenDto: RefreshTokenDto,
