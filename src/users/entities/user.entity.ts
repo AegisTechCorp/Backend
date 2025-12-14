@@ -9,13 +9,16 @@ import {
 /**
  * Entité User pour architecture Hybride (Auth Classique + Vault Zero-Knowledge)
  *
- * Architecture :
- * - passwordHash : Hash Argon2id du mot de passe pour l'authentification (serveur)
- * - vaultSalt : Salt aléatoire utilisé côté client pour dériver la masterKey du vault
+ * Architecture avec 2 salts distincts :
+ * - authSalt : Salt pour dériver la clé d'authentification côté client 
+ * - vaultSalt : Salt pour dériver la masterKey du vault côté client
+ * - passwordHash : Hash Bcrypt du mot de passe pour l'authentification serveur
  *
  * Le mot de passe a 2 usages :
- * 1. Authentification : password → hashé serveur avec Argon2 → passwordHash
- * 2. Vault : password + vaultSalt → dérivation client Argon2 → masterKey → chiffrement données
+ * 1. Authentification : password → Bcrypt → passwordHash (stocké et vérifié côté serveur)
+ * 2. Vault : password + vaultSalt → Argon2 → masterKey → chiffrement données (côté client)
+ *
+ * Note : authSalt est prévu pour une future migration vers Argon2 pour l'authentification
  */
 @Entity('users')
 export class User {
@@ -26,7 +29,10 @@ export class User {
   email: string;
 
   @Column({ length: 255 })
-  passwordHash: string; // Hash Argon2id du password pour authentification
+  passwordHash: string; // Hash Bcrypt du password pour authentification
+
+  @Column({ length: 255, nullable: true })
+  authSalt: string; // Salt pour dérivation client-side de la authKey (ajouté récemment)
 
   @Column({ length: 255 })
   vaultSalt: string; // Salt pour dérivation client-side de la masterKey
@@ -61,7 +67,7 @@ export class User {
   // Méthode pour retourner l'utilisateur sans les données sensibles
   toJSON() {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { passwordHash, recoveryKeyHash, twoFactorSecret, ...user } = this;
+    const { passwordHash, recoveryKeyHash, twoFactorSecret, authSalt, ...user } = this;
     return user;
   }
 }
