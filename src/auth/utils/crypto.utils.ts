@@ -41,6 +41,17 @@ export async function verifyPassword(
 }
 
 /**
+ * Génère un salt aléatoire pour l'authentification (Zero-Knowledge)
+ * Ce salt est stocké côté serveur et retourné au client pour dériver la authKey
+ *
+ * @returns Salt encodé en base64 (32 bytes)
+ */
+export function generateAuthSalt(): string {
+  // Générer 32 bytes aléatoires (256 bits)
+  return randomBytes(32).toString('base64');
+}
+
+/**
  * Génère un salt aléatoire pour le vault (Zero-Knowledge)
  * Ce salt est stocké côté serveur et retourné au client pour dériver la masterKey
  *
