@@ -10,10 +10,16 @@ import { MedicalRecord } from '../../medical-records/entities/medical-record.ent
 import { User } from '../../users/entities/user.entity';
 
 /**
- * Entité FileAttachment - Stockage de fichiers chiffrés (Zero-Knowledge)
+ * Entité FileAttachment - Stockage de fichiers (Mode Hybride)
  *
- * Les fichiers sont TOUJOURS chiffrés côté client AVANT l'upload
- * Le serveur ne stocke que des blobs chiffrés et ne peut JAMAIS voir le contenu
+ * Deux modes de stockage :
+ * 1. Mode centralisé (isEncrypted = false) : fichiers non chiffrés
+ * 2. Mode zero-knowledge (isEncrypted = true) : fichiers chiffrés avec mot de passe unique
+ *
+ * Pour les fichiers chiffrés :
+ * - Le fichier est chiffré côté client avec un mot de passe unique
+ * - Le salt est stocké côté serveur
+ * - Le serveur ne peut jamais voir le contenu sans le mot de passe
  */
 @Entity('file_attachments')
 export class FileAttachment {
@@ -34,13 +40,29 @@ export class FileAttachment {
   @JoinColumn({ name: 'medicalRecordId' })
   medicalRecord: MedicalRecord;
 
-  // Nom du fichier chiffré (pour affichage, chiffré côté client)
-  @Column({ type: 'text' })
+  // Indique si le fichier est chiffré avec un mot de passe unique (zero-knowledge)
+  @Column({ type: 'boolean', default: false })
+  isEncrypted: boolean;
+
+  // Salt pour le chiffrement (uniquement si isEncrypted = true)
+  @Column({ type: 'text', nullable: true })
+  salt: string;
+
+  // Nom du fichier en clair (uniquement si isEncrypted = false, mode centralisé)
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  originalFilename: string;
+
+  // Nom du fichier chiffré (uniquement si isEncrypted = true, mode zero-knowledge, chiffré avec le mot de passe unique)
+  @Column({ type: 'text', nullable: true })
   encryptedFilename: string;
 
-  // Chemin du fichier chiffré sur le disque
+  // Chemin du fichier sur le disque (chiffré ou non selon isEncrypted)
   @Column({ type: 'varchar', length: 500 })
   filepath: string;
+
+  // Nom du médecin prescripteur (optionnel)
+  @Column({ type: 'varchar', length: 200, nullable: true })
+  doctorName: string;
 
   // Type MIME du fichier ORIGINAL (avant chiffrement)
   // Stocké en clair car non sensible (ex: "application/pdf", "image/jpeg")
@@ -65,10 +87,14 @@ export class FileAttachment {
       id: this.id,
       userId: this.userId,
       medicalRecordId: this.medicalRecordId,
+      isEncrypted: this.isEncrypted,
+      salt: this.salt,
+      originalFilename: this.originalFilename,
       encryptedFilename: this.encryptedFilename,
       mimeType: this.mimeType,
       encryptedSize: this.encryptedSize,
       originalSize: this.originalSize,
+      doctorName: this.doctorName,
       createdAt: this.createdAt,
     };
   }
