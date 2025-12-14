@@ -15,6 +15,7 @@ import { TwoFactorService } from './two-factor.service';
 import {
   hashPassword,
   verifyPassword,
+  generateAuthSalt,
   generateVaultSalt,
 } from './utils/crypto.utils';
 import * as crypto from 'crypto';
@@ -52,13 +53,17 @@ export class AuthService {
     // 1. Hasher le mot de passe avec Bcrypt pour l'authentification
     const passwordHash = await hashPassword(password);
 
-    // 2. Générer un sel aléatoire pour le vault (dérivation client-side)
+    // 2. Générer un sel aléatoire pour l'authentification (dérivation client-side)
+    const authSalt = generateAuthSalt();
+
+    // 3. Générer un sel aléatoire pour le vault (dérivation client-side)
     const vaultSalt = generateVaultSalt();
 
-    // 3. Créer l'utilisateur
+    // 4. Créer l'utilisateur
     const user = this.userRepository.create({
       email,
       passwordHash,
+      authSalt,
       vaultSalt,
       firstName,
       lastName,
@@ -67,11 +72,12 @@ export class AuthService {
 
     await this.userRepository.save(user);
 
-    // 4. Générer les tokens JWT
+    // 5. Générer les tokens JWT
     const tokens = await this.generateTokens(user);
 
     return {
       user: user.toJSON(),
+      authSalt, // Retourner le salt au client pour dérivation de la authKey
       vaultSalt, // Retourner le salt au client pour dérivation de la masterKey
       ...tokens,
     };
@@ -122,6 +128,7 @@ export class AuthService {
 
     return {
       user: user.toJSON(),
+      authSalt: user.authSalt, // Retourner le salt pour dérivation de la authKey
       vaultSalt: user.vaultSalt, // Retourner le salt pour dérivation de la masterKey
       ...tokens,
     };
@@ -375,6 +382,7 @@ export class AuthService {
 
     return {
       user: user.toJSON(),
+      authSalt: user.authSalt,
       vaultSalt: user.vaultSalt,
       ...tokens,
     };
