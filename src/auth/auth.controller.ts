@@ -38,7 +38,7 @@ export class AuthController {
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
-    summary: "Inscription d'un nouvel utilisateur (Zero-Knowledge)",
+    summary: "Inscription d'un nouvel utilisateur",
     description:
       'Crée un compte utilisateur. Le client doit envoyer un authHash dérivé du mot de passe, jamais le mot de passe en clair.',
   })
@@ -56,6 +56,7 @@ export class AuthController {
     return {
       user: result.user,
       accessToken: result.accessToken,
+      authSalt: result.authSalt, // Nécessaire pour dérivation client-side de la authKey
       vaultSalt: result.vaultSalt, // Nécessaire pour dérivation client-side de la masterKey
     };
   }
@@ -91,7 +92,8 @@ export class AuthController {
       return {
         user: result.user,
         accessToken: result.accessToken,
-        vaultSalt: result.vaultSalt, // Nécessaire pour dérivation client-side de la masterKey
+        authSalt: result.authSalt, 
+        vaultSalt: result.vaultSalt, 
       };
     }
 
@@ -212,6 +214,7 @@ export class AuthController {
     schema: {
       example: {
         user: { id: '...', email: '...' },
+        authSalt: 'xyz789...',
         vaultSalt: 'abc123...',
         accessToken: 'eyJhbGci...',
         refreshToken: 'eyJhbGci...',
@@ -239,6 +242,7 @@ export class AuthController {
 
     return {
       user: result.user,
+      authSalt: result.authSalt,
       vaultSalt: result.vaultSalt,
       accessToken: result.accessToken,
     };
