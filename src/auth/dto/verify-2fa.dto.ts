@@ -3,7 +3,7 @@ import { ApiProperty } from '@nestjs/swagger';
 
 export class Verify2FADto {
   @ApiProperty({
-    description: 'Code 2FA à 6 chiffres généré par l\'application authenticator',
+    description: "Code 2FA à 6 chiffres généré par l'application authenticator",
     example: '123456',
     minLength: 6,
     maxLength: 6,

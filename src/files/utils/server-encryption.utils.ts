@@ -143,5 +143,9 @@ export function decryptFileServerSide(
  * @returns true si la clé est valide, false sinon
  */
 export function isValidServerKey(serverKey: string): boolean {
-  return !!(serverKey && serverKey.length === 64 && /^[0-9a-f]+$/i.test(serverKey));
+  return !!(
+    serverKey &&
+    serverKey.length === 64 &&
+    /^[0-9a-f]+$/i.test(serverKey)
+  );
 }

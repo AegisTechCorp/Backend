@@ -10,7 +10,12 @@ import {
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { ConfigService } from '@nestjs/config';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -182,7 +187,7 @@ export class AuthController {
   @ApiOperation({
     summary: 'Vérifier et activer définitivement le 2FA (étape 2)',
     description:
-      'Vérifie le code 2FA fourni et active définitivement le 2FA pour l\'utilisateur',
+      "Vérifie le code 2FA fourni et active définitivement le 2FA pour l'utilisateur",
   })
   @ApiResponse({
     status: 200,
@@ -218,7 +223,10 @@ export class AuthController {
       },
     },
   })
-  @ApiResponse({ status: 401, description: 'Code 2FA invalide ou token expiré' })
+  @ApiResponse({
+    status: 401,
+    description: 'Code 2FA invalide ou token expiré',
+  })
   async login2FA(
     @Body() dto: Login2FADto,
     @Req() request: Request,
@@ -250,7 +258,7 @@ export class AuthController {
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Désactiver le 2FA',
-    description: 'Désactive le 2FA pour l\'utilisateur connecté',
+    description: "Désactive le 2FA pour l'utilisateur connecté",
   })
   @ApiResponse({
     status: 200,
