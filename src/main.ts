@@ -4,11 +4,17 @@ import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import { CloudLoggingLogger } from './common/logger/cloud-logging.logger';
 import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
+  // Utiliser le logger Cloud Logging en production
+  const isProduction = process.env.NODE_ENV === 'production';
+  
   const app = await NestFactory.create(AppModule, {
-    logger: ['error', 'warn', 'log'],
+    logger: isProduction 
+      ? new CloudLoggingLogger('NestJS')
+      : ['error', 'warn', 'log', 'debug'],
   });
 
   const configService = app.get(ConfigService);
@@ -122,9 +128,9 @@ async function bootstrap() {
   });
 
   const port = process.env.PORT || 3000;
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
 
-  console.log(`Aegis API is running on: http://localhost:${port}/api/v1`);
+  console.log(`Aegis API is running on port ${port}`);
   console.log(`Swagger documentation: http://localhost:${port}/api/docs`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 }
