@@ -1,4 +1,11 @@
-import { IsString, IsNotEmpty, IsNumber, Min, IsBoolean, IsOptional } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsNumber,
+  Min,
+  IsBoolean,
+  IsOptional,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 
@@ -11,12 +18,18 @@ import { Transform } from 'class-transformer';
  */
 export class UploadFileDto {
   @ApiProperty({
-    description: 'Indique si le fichier est chiffré avec un mot de passe unique',
+    description:
+      'Indique si le fichier est chiffré avec un mot de passe unique',
     example: true,
     default: false,
   })
   @Transform(({ value }) => {
-    console.log('🔄 Transform isEncrypted - value:', value, 'type:', typeof value);
+    console.log(
+      '🔄 Transform isEncrypted - value:',
+      value,
+      'type:',
+      typeof value,
+    );
     if (value === 'true' || value === true) return true;
     if (value === 'false' || value === false) return false;
     return false; // Par défaut
@@ -44,7 +57,8 @@ export class UploadFileDto {
   originalFilename?: string;
 
   @ApiProperty({
-    description: 'Nom du fichier chiffré (utilisé si isEncrypted = true, chiffré côté client)',
+    description:
+      'Nom du fichier chiffré (utilisé si isEncrypted = true, chiffré côté client)',
     example: 'U2FsdGVkX1+encrypted_filename...',
     required: false,
   })
@@ -66,7 +80,7 @@ export class UploadFileDto {
   })
   @IsNumber()
   @Min(0)
-  @Transform(({ value }) => parseInt(value, 10))
+  @Transform(({ value }): number => parseInt(String(value), 10))
   originalSize: number;
 
   @ApiProperty({

@@ -28,7 +28,6 @@ import { UploadFileDto } from './dto/upload-file.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { User } from '../users/entities/user.entity';
-import * as fs from 'fs';
 
 /**
  * Contrôleur de gestion des fichiers chiffrés (Zero-Knowledge)
@@ -152,7 +151,10 @@ export class FilesController {
       response.setHeader('X-File-Encrypted', 'true');
     } else {
       // Mode traditionnel : fichier déchiffré
-      response.setHeader('Content-Type', mimeType || 'application/octet-stream');
+      response.setHeader(
+        'Content-Type',
+        mimeType || 'application/octet-stream',
+      );
       response.setHeader('X-File-Encrypted', 'false');
     }
 

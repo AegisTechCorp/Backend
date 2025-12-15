@@ -276,16 +276,19 @@ export class AuthService {
    */
   private verifyTempToken(tempToken: string): string {
     try {
-      const payload = this.jwtService.verify(tempToken, {
-        secret: this.configService.get('jwt.accessToken.secret'),
-      });
+      const payload = this.jwtService.verify<{ type: string; userId: string }>(
+        tempToken,
+        {
+          secret: this.configService.get('jwt.accessToken.secret'),
+        },
+      );
 
       if (payload.type !== '2fa-temp') {
         throw new UnauthorizedException('Token invalide');
       }
 
       return payload.userId;
-    } catch (error) {
+    } catch {
       throw new UnauthorizedException('Token 2FA expiré ou invalide');
     }
   }
@@ -320,9 +323,7 @@ export class AuthService {
   async verify2FA(userId: string, token: string) {
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user || !user.twoFactorSecret) {
-      throw new UnauthorizedException(
-        'Veuillez d\'abord activer le 2FA',
-      );
+      throw new UnauthorizedException("Veuillez d'abord activer le 2FA");
     }
 
     // Vérifier le code

@@ -74,9 +74,15 @@ export class FilesService {
     });
 
     // Convertir manuellement isEncrypted (car enableImplicitConversion peut mal le gérer)
-    const isEncryptedRaw = uploadDto.isEncrypted as any; // Cast nécessaire car peut être string ou boolean
+    const isEncryptedRaw: string | boolean | number | undefined =
+      uploadDto.isEncrypted as string | boolean | number | undefined; // Cast nécessaire car peut être string ou boolean
     let isEncrypted = false;
-    if (isEncryptedRaw === true || isEncryptedRaw === 'true' || isEncryptedRaw === '1' || isEncryptedRaw === 1) {
+    if (
+      isEncryptedRaw === true ||
+      isEncryptedRaw === 'true' ||
+      isEncryptedRaw === '1' ||
+      isEncryptedRaw === 1
+    ) {
       isEncrypted = true;
     } else {
       isEncrypted = false; // Par défaut (undefined, false, '0', 0, etc.)
@@ -115,7 +121,11 @@ export class FilesService {
       const encryptedData = encryptFileServerSide(file.buffer, serverKey);
       fileContentToSave = encryptedData; // Format : "iv:authTag:ciphertext"
 
-      console.log('✅ Fichier chiffré côté serveur (taille:', encryptedData.length, 'caractères)');
+      console.log(
+        '✅ Fichier chiffré côté serveur (taille:',
+        encryptedData.length,
+        'caractères)',
+      );
     }
 
     // 4. Sauvegarder le fichier chiffré sur le disque
@@ -234,7 +244,11 @@ export class FilesService {
       fileData = decryptFileServerSide(encryptedDataString, serverKey);
       filename = file.originalFilename || 'decrypted-file';
 
-      console.log('✅ Fichier déchiffré côté serveur (taille:', fileData.length, 'bytes)');
+      console.log(
+        '✅ Fichier déchiffré côté serveur (taille:',
+        fileData.length,
+        'bytes)',
+      );
     }
 
     return {
