@@ -11,11 +11,24 @@ async function bootstrap() {
   // Utiliser le logger Cloud Logging en production
   const isProduction = process.env.NODE_ENV === 'production';
   
+  const startTime = Date.now();
+  console.log('========================================');
+  console.log('[STARTUP] Starting Aegis API...');
+  console.log(`[STARTUP] Time: ${new Date().toISOString()}`);
+  console.log(`[STARTUP] PORT=${process.env.PORT}`);
+  console.log(`[STARTUP] NODE_ENV=${process.env.NODE_ENV}`);
+  console.log(`[STARTUP] DATABASE_HOST=${process.env.DATABASE_HOST}`);
+  console.log('========================================');
+  
+  console.log('[STARTUP] Creating NestFactory... (this connects to DB)');
+  
   const app = await NestFactory.create(AppModule, {
     logger: isProduction 
       ? new CloudLoggingLogger('NestJS')
       : ['error', 'warn', 'log', 'debug'],
   });
+  
+  console.log(`[STARTUP] NestFactory created in ${Date.now() - startTime}ms`);
 
   const configService = app.get(ConfigService);
 
@@ -128,11 +141,25 @@ async function bootstrap() {
   });
 
   const port = process.env.PORT || 3000;
+  
+  console.log(`[STARTUP] Starting HTTP server on port ${port}...`);
+  
   await app.listen(port, '0.0.0.0');
 
-  console.log(`Aegis API is running on port ${port}`);
-  console.log(`Swagger documentation: http://localhost:${port}/api/docs`);
+  console.log('========================================');
+  console.log(`[STARTUP] SERVER READY - Listening on port ${port}`);
+  console.log(`[STARTUP] Total startup time: ${Date.now() - startTime}ms`);
+  console.log(`Aegis API: http://0.0.0.0:${port}/api/v1`);
+  console.log(`Swagger: http://0.0.0.0:${port}/api/docs`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log('========================================');
 }
 
-void bootstrap();
+bootstrap().catch((error) => {
+  console.error('========================================');
+  console.error('[STARTUP] FATAL ERROR - Application failed to start');
+  console.error('[STARTUP] Error:', error.message);
+  console.error('[STARTUP] Stack:', error.stack);
+  console.error('========================================');
+  process.exit(1);
+});

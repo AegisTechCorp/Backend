@@ -6,14 +6,25 @@ import {
   HttpStatus,
   Req,
   Res,
+  UseGuards,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { ConfigService } from '@nestjs/config';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { Verify2FADto } from './dto/verify-2fa.dto';
+import { Login2FADto } from './dto/login-2fa.dto';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { CurrentUser } from './decorators/current-user.decorator';
+import { User } from '../users/entities/user.entity';
 
 /**
  * Contrôleur d'authentification avec architecture Zero-Knowledge
@@ -32,7 +43,7 @@ export class AuthController {
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
-    summary: "Inscription d'un nouvel utilisateur (Zero-Knowledge)",
+    summary: "Inscription d'un nouvel utilisateur",
     description:
       'Crée un compte utilisateur. Le client doit envoyer un authHash dérivé du mot de passe, jamais le mot de passe en clair.',
   })
@@ -50,7 +61,7 @@ export class AuthController {
     return {
       user: result.user,
       accessToken: result.accessToken,
-      vaultSalt: result.vaultSalt, // Nécessaire pour dérivation client-side de la masterKey
+      authSalt: result.authSalt, // Nécessaire pour dérivation client-side de la masterKey
     };
   }
 
@@ -73,14 +84,24 @@ export class AuthController {
 
     const result = await this.authService.login(loginDto, ipAddress, userAgent);
 
-    // Stocker le refresh token dans un cookie HttpOnly
-    this.setRefreshTokenCookie(response, result.refreshToken);
+    // Si 2FA requis, retourner uniquement le tempToken
+    if ('requires2FA' in result && result.requires2FA) {
+      return result;
+    }
 
-    return {
-      user: result.user,
-      accessToken: result.accessToken,
-      vaultSalt: result.vaultSalt, // Nécessaire pour dérivation client-side de la masterKey
-    };
+    // Login normal : stocker le refresh token dans un cookie HttpOnly
+    if ('refreshToken' in result) {
+      this.setRefreshTokenCookie(response, result.refreshToken);
+
+      return {
+        user: result.user,
+        accessToken: result.accessToken,
+        authSalt: result.authSalt,
+      };
+    }
+
+    // Ne devrait jamais arriver ici
+    throw new Error('État de login invalide');
   }
 
   @Post('refresh')
@@ -131,5 +152,126 @@ export class AuthController {
       sameSite: cookieConfig.sameSite,
       maxAge: cookieConfig.maxAge,
     });
+  }
+
+  // ==================== Routes 2FA ====================
+
+  @Post('2fa/enable')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Activer le 2FA (étape 1 : génération du QR code)',
+    description:
+      'Génère un secret TOTP et un QR code à scanner avec Google Authenticator, Authy, etc.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'QR code généré avec succès',
+    schema: {
+      example: {
+        qrCode: 'data:image/png;base64,iVBORw0KG...',
+        secret: 'JBSWY3DPEHPK3PXP',
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Non authentifié' })
+  async enable2FA(@CurrentUser() user: User) {
+    return await this.authService.enable2FA(user.id);
+  }
+
+  @Post('2fa/verify')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Vérifier et activer définitivement le 2FA (étape 2)',
+    description:
+      "Vérifie le code 2FA fourni et active définitivement le 2FA pour l'utilisateur",
+  })
+  @ApiResponse({
+    status: 200,
+    description: '2FA activé avec succès',
+    schema: {
+      example: {
+        success: true,
+        message: '2FA activé avec succès',
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Code 2FA invalide' })
+  async verify2FA(@CurrentUser() user: User, @Body() dto: Verify2FADto) {
+    return await this.authService.verify2FA(user.id, dto.token);
+  }
+
+  @Post('2fa/login')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Valider le 2FA lors du login',
+    description:
+      'Valide le code 2FA après un login réussi et retourne les tokens complets',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Login 2FA réussi',
+    schema: {
+      example: {
+        user: { id: '...', email: '...' },
+        authSalt: 'xyz789...',
+        accessToken: 'eyJhbGci...',
+        refreshToken: 'eyJhbGci...',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Code 2FA invalide ou token expiré',
+  })
+  async login2FA(
+    @Body() dto: Login2FADto,
+    @Req() request: Request,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const ipAddress = request.ip;
+    const userAgent = request.headers['user-agent'];
+
+    const result = await this.authService.validate2FALogin(
+      dto.tempToken,
+      dto.token,
+      ipAddress,
+      userAgent,
+    );
+
+    // Stocker le refresh token dans un cookie HttpOnly
+    this.setRefreshTokenCookie(response, result.refreshToken);
+
+    return {
+      user: result.user,
+      authSalt: result.authSalt,
+      accessToken: result.accessToken,
+    };
+  }
+
+  @Post('2fa/disable')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Désactiver le 2FA',
+    description: "Désactive le 2FA pour l'utilisateur connecté",
+  })
+  @ApiResponse({
+    status: 200,
+    description: '2FA désactivé avec succès',
+    schema: {
+      example: {
+        success: true,
+        message: '2FA désactivé avec succès',
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Non authentifié' })
+  async disable2FA(@CurrentUser() user: User) {
+    return await this.authService.disable2FA(user.id);
   }
 }
