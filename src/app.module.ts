@@ -25,9 +25,13 @@ import securityConfig from './config/security.config';
     // Configuration TypeORM avec injection de config
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => ({
-        ...(await Promise.resolve(configService.get('database'))),
-      }),
+      useFactory: async (configService: ConfigService) => {
+        console.log('[DB] Configuring TypeORM...');
+        console.log(`[DB] Host: ${configService.get('database.host')}`);
+        console.log('[DB] Attempting database connection...');
+        const config = configService.get('database');
+        return config;
+      },
       inject: [ConfigService],
     }),
 
