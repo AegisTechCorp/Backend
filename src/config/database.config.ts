@@ -11,11 +11,20 @@ export default registerAs(
     password: process.env.DATABASE_PASSWORD,
     database: process.env.DATABASE_NAME,
     entities: [__dirname + '/../**/*.entity{.ts,.js}'],
-    synchronize: process.env.NODE_ENV === 'development', // ne pas oublier : false en production
+    synchronize: false, // Désactivé - utiliser les migrations en production
     logging: process.env.NODE_ENV === 'development',
     ssl:
       process.env.DATABASE_SSL === 'true'
         ? { rejectUnauthorized: false }
         : false,
+    // Configuration pour Neon DB (cold start) et Cloud Run
+    connectTimeoutMS: 30000, // 30s pour le cold start de Neon
+    extra: {
+      connectionTimeoutMillis: 30000,
+      idleTimeoutMillis: 30000,
+      max: 5, // Pool réduit pour Cloud Run
+    },
+    retryAttempts: 5,
+    retryDelay: 3000,
   }),
 );
