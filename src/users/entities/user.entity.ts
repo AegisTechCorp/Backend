@@ -9,16 +9,13 @@ import {
 /**
  * Entité User pour architecture Hybride (Auth Classique + Vault Zero-Knowledge)
  *
- * Architecture avec 2 salts distincts :
- * - authSalt : Salt pour dériver la clé d'authentification côté client 
- * - vaultSalt : Salt pour dériver la masterKey du vault côté client
+ * Architecture :
+ * - authSalt : Salt unique généré à l'inscription pour dériver la masterKey côté client
  * - passwordHash : Hash Bcrypt du mot de passe pour l'authentification serveur
  *
  * Le mot de passe a 2 usages :
  * 1. Authentification : password → Bcrypt → passwordHash (stocké et vérifié côté serveur)
- * 2. Vault : password + vaultSalt → Argon2 → masterKey → chiffrement données (côté client)
- *
- * Note : authSalt est prévu pour une future migration vers Argon2 pour l'authentification
+ * 2. Vault : password + email + authSalt → Argon2id → masterKey → chiffrement données (côté client)
  */
 @Entity('users')
 export class User {
@@ -31,11 +28,8 @@ export class User {
   @Column({ length: 255 })
   passwordHash: string; // Hash Bcrypt du password pour authentification
 
-  @Column({ length: 255, nullable: true })
-  authSalt: string; // Salt pour dérivation client-side de la authKey (ajouté récemment)
-
   @Column({ length: 255 })
-  vaultSalt: string; // Salt pour dérivation client-side de la masterKey
+  authSalt: string; // Salt unique par utilisateur pour dériver la masterKey côté client
 
   @Column({ length: 100, nullable: true })
   firstName: string;
@@ -67,7 +61,7 @@ export class User {
   // Méthode pour retourner l'utilisateur sans les données sensibles
   toJSON() {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { passwordHash, recoveryKeyHash, twoFactorSecret, authSalt, ...user } = this;
+    const { passwordHash, recoveryKeyHash, twoFactorSecret, ...user } = this;
     return user;
   }
 }

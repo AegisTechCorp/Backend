@@ -117,10 +117,14 @@ export class FilesController {
   }
 
   @Get(':fileId/download')
-  @ApiOperation({ summary: 'Télécharger un fichier chiffré' })
+  @ApiOperation({
+    summary: 'Télécharger un fichier',
+    description:
+      'Mode traditionnel: fichier déchiffré côté serveur | Mode zero-knowledge: blob chiffré',
+  })
   @ApiResponse({
     status: 200,
-    description: 'Fichier chiffré retourné',
+    description: 'Fichier retourné (déchiffré ou chiffré selon le mode)',
     content: {
       'application/octet-stream': {
         schema: {
@@ -138,20 +142,27 @@ export class FilesController {
     @Param('fileId') fileId: string,
     @Res() response: Response,
   ) {
-    const { filepath, filename } = await this.filesService.downloadFile(
-      user.id,
-      fileId,
-    );
+    const { data, filename, mimeType, isEncrypted } =
+      await this.filesService.downloadFile(user.id, fileId);
 
-    // Envoyer le fichier chiffré
-    response.setHeader('Content-Type', 'application/octet-stream');
+    // En-têtes HTTP
+    if (isEncrypted) {
+      // Mode zero-knowledge : blob chiffré
+      response.setHeader('Content-Type', 'application/octet-stream');
+      response.setHeader('X-File-Encrypted', 'true');
+    } else {
+      // Mode traditionnel : fichier déchiffré
+      response.setHeader('Content-Type', mimeType || 'application/octet-stream');
+      response.setHeader('X-File-Encrypted', 'false');
+    }
+
     response.setHeader(
       'Content-Disposition',
-      `attachment; filename="${filename}"`,
+      `attachment; filename="${encodeURIComponent(filename)}"`,
     );
 
-    const fileStream = fs.createReadStream(filepath);
-    fileStream.pipe(response);
+    // Envoyer le fichier
+    response.send(data);
   }
 
   @Delete(':fileId')

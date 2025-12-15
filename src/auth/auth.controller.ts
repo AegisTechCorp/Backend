@@ -56,8 +56,7 @@ export class AuthController {
     return {
       user: result.user,
       accessToken: result.accessToken,
-      authSalt: result.authSalt, // Nécessaire pour dérivation client-side de la authKey
-      vaultSalt: result.vaultSalt, // Nécessaire pour dérivation client-side de la masterKey
+      authSalt: result.authSalt, // Nécessaire pour dérivation client-side de la masterKey
     };
   }
 
@@ -92,8 +91,7 @@ export class AuthController {
       return {
         user: result.user,
         accessToken: result.accessToken,
-        authSalt: result.authSalt, 
-        vaultSalt: result.vaultSalt, 
+        authSalt: result.authSalt,
       };
     }
 
@@ -215,7 +213,6 @@ export class AuthController {
       example: {
         user: { id: '...', email: '...' },
         authSalt: 'xyz789...',
-        vaultSalt: 'abc123...',
         accessToken: 'eyJhbGci...',
         refreshToken: 'eyJhbGci...',
       },
@@ -243,7 +240,6 @@ export class AuthController {
     return {
       user: result.user,
       authSalt: result.authSalt,
-      vaultSalt: result.vaultSalt,
       accessToken: result.accessToken,
     };
   }

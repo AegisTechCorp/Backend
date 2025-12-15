@@ -16,7 +16,6 @@ import {
   hashPassword,
   verifyPassword,
   generateAuthSalt,
-  generateVaultSalt,
 } from './utils/crypto.utils';
 import * as crypto from 'crypto';
 
@@ -37,7 +36,7 @@ export class AuthService {
    * (Authentification classique + Vault Zero-Knowledge)
    *
    * @param registerDto - Données d'inscription (email, password)
-   * @returns Tokens JWT (access + refresh), utilisateur et vault_salt
+   * @returns Tokens JWT (access + refresh), utilisateur et authSalt
    */
   async register(registerDto: RegisterDto) {
     const { email, password, firstName, lastName, dateOfBirth } = registerDto;
@@ -53,18 +52,14 @@ export class AuthService {
     // 1. Hasher le mot de passe avec Bcrypt pour l'authentification
     const passwordHash = await hashPassword(password);
 
-    // 2. Générer un sel aléatoire pour l'authentification (dérivation client-side)
+    // 2. Générer un sel aléatoire pour la dérivation de la masterKey (côté client)
     const authSalt = generateAuthSalt();
 
-    // 3. Générer un sel aléatoire pour le vault (dérivation client-side)
-    const vaultSalt = generateVaultSalt();
-
-    // 4. Créer l'utilisateur
+    // 3. Créer l'utilisateur
     const user = this.userRepository.create({
       email,
       passwordHash,
       authSalt,
-      vaultSalt,
       firstName,
       lastName,
       dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
@@ -72,13 +67,12 @@ export class AuthService {
 
     await this.userRepository.save(user);
 
-    // 5. Générer les tokens JWT
+    // 4. Générer les tokens JWT
     const tokens = await this.generateTokens(user);
 
     return {
       user: user.toJSON(),
-      authSalt, // Retourner le salt au client pour dérivation de la authKey
-      vaultSalt, // Retourner le salt au client pour dérivation de la masterKey
+      authSalt, // Retourner le salt au client pour dérivation de la masterKey
       ...tokens,
     };
   }
@@ -90,7 +84,7 @@ export class AuthService {
    * @param loginDto - Données de connexion (email, password)
    * @param ipAddress - Adresse IP du client (optionnel, pour tracking)
    * @param userAgent - User agent du client (optionnel, pour tracking)
-   * @returns Tokens JWT (access + refresh), utilisateur et vault_salt
+   * @returns Tokens JWT (access + refresh), utilisateur et authSalt
    */
   async login(loginDto: LoginDto, ipAddress?: string, userAgent?: string) {
     const { email, password } = loginDto;
@@ -128,8 +122,7 @@ export class AuthService {
 
     return {
       user: user.toJSON(),
-      authSalt: user.authSalt, // Retourner le salt pour dérivation de la authKey
-      vaultSalt: user.vaultSalt, // Retourner le salt pour dérivation de la masterKey
+      authSalt: user.authSalt, // Retourner le salt pour dérivation de la masterKey
       ...tokens,
     };
   }
@@ -383,7 +376,6 @@ export class AuthService {
     return {
       user: user.toJSON(),
       authSalt: user.authSalt,
-      vaultSalt: user.vaultSalt,
       ...tokens,
     };
   }

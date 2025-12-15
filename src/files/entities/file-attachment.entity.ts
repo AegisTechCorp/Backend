@@ -13,13 +13,20 @@ import { User } from '../../users/entities/user.entity';
  * Entité FileAttachment - Stockage de fichiers (Mode Hybride)
  *
  * Deux modes de stockage :
- * 1. Mode centralisé (isEncrypted = false) : fichiers non chiffrés
- * 2. Mode zero-knowledge (isEncrypted = true) : fichiers chiffrés avec mot de passe unique
  *
- * Pour les fichiers chiffrés :
- * - Le fichier est chiffré côté client avec un mot de passe unique
- * - Le salt est stocké côté serveur
- * - Le serveur ne peut jamais voir le contenu sans le mot de passe
+ * 1. MODE TRADITIONNEL (isEncrypted = false) - NON zero-knowledge
+ *    - Fichier reçu EN CLAIR par le serveur (via HTTPS)
+ *    - Serveur CHIFFRE le fichier avec SA clé (SERVER_ENCRYPTION_KEY)
+ *    - Serveur PEUT déchiffrer quand nécessaire
+ *    - Métadonnées (nom, taille) stockées EN CLAIR en BDD
+ *    - Fichier chiffré sur disque au format "iv:authTag:ciphertext"
+ *
+ * 2. MODE ZERO-KNOWLEDGE (isEncrypted = true)
+ *    - Fichier chiffré CÔTÉ CLIENT avec mot de passe unique
+ *    - Serveur reçoit un BLOB CHIFFRÉ qu'il ne peut PAS déchiffrer
+ *    - Salt stocké côté serveur pour dérivation de clé
+ *    - Métadonnées AUSSI chiffrées (nom de fichier chiffré)
+ *    - Serveur ne peut JAMAIS voir le contenu sans le mot de passe
  */
 @Entity('file_attachments')
 export class FileAttachment {
@@ -40,23 +47,29 @@ export class FileAttachment {
   @JoinColumn({ name: 'medicalRecordId' })
   medicalRecord: MedicalRecord;
 
-  // Indique si le fichier est chiffré avec un mot de passe unique (zero-knowledge)
+  // Mode de chiffrement :
+  // - false = Mode traditionnel (serveur chiffre avec sa clé)
+  // - true = Mode zero-knowledge (client chiffre avec mot de passe unique)
   @Column({ type: 'boolean', default: false })
   isEncrypted: boolean;
 
-  // Salt pour le chiffrement (uniquement si isEncrypted = true)
+  // Salt pour le chiffrement côté client (UNIQUEMENT si isEncrypted = true)
+  // Permet au client de re-dériver la clé de chiffrement avec Argon2id
   @Column({ type: 'text', nullable: true })
   salt: string;
 
-  // Nom du fichier en clair (uniquement si isEncrypted = false, mode centralisé)
+  // Nom du fichier EN CLAIR (UNIQUEMENT si isEncrypted = false, mode traditionnel)
+  // Visible par le serveur et les admins
   @Column({ type: 'varchar', length: 500, nullable: true })
   originalFilename: string;
 
-  // Nom du fichier chiffré (uniquement si isEncrypted = true, mode zero-knowledge, chiffré avec le mot de passe unique)
+  // Nom du fichier CHIFFRÉ (UNIQUEMENT si isEncrypted = true, mode zero-knowledge)
+  // Chiffré côté client avec le mot de passe unique, serveur ne peut pas le lire
   @Column({ type: 'text', nullable: true })
   encryptedFilename: string;
 
-  // Chemin du fichier sur le disque (chiffré ou non selon isEncrypted)
+  // Chemin du fichier sur le disque
+  // Le fichier stocké est TOUJOURS chiffré (par le serveur ou par le client selon le mode)
   @Column({ type: 'varchar', length: 500 })
   filepath: string;
 

@@ -1,5 +1,5 @@
 import * as bcrypt from 'bcrypt';
-import { createHash, randomBytes } from 'crypto';
+import { randomBytes } from 'crypto';
 
 /**
  * Hashe un mot de passe avec Bcrypt pour stockage sécurisé
@@ -41,39 +41,29 @@ export async function verifyPassword(
 }
 
 /**
- * Génère un salt aléatoire pour l'authentification (Zero-Knowledge)
- * Ce salt est stocké côté serveur et retourné au client pour dériver la authKey
+ * Génère un salt aléatoire unique pour l'utilisateur
+ * Ce salt est stocké côté serveur et retourné au client pour dériver la masterKey
+ * Utilisé avec Argon2id côté client : password + email + authSalt → masterKey
  *
- * @returns Salt encodé en base64 (32 bytes)
+ * @returns Salt encodé en base64 (32 bytes / 256 bits)
  */
 export function generateAuthSalt(): string {
-  // Générer 32 bytes aléatoires (256 bits)
-  return randomBytes(32).toString('base64');
-}
-
-/**
- * Génère un salt aléatoire pour le vault (Zero-Knowledge)
- * Ce salt est stocké côté serveur et retourné au client pour dériver la masterKey
- *
- * @returns Salt encodé en base64 (32 bytes)
- */
-export function generateVaultSalt(): string {
-  // Générer 32 bytes aléatoires (256 bits)
   return randomBytes(32).toString('base64');
 }
 
 /**
  * Génère une clé de récupération sécurisée pour l'utilisateur
  * Cette clé permet de récupérer l'accès en cas d'oubli du mot de passe
- * @returns Clé de récupération au format hexadécimal
+ *
+ * Sécurité :
+ * - Utilise crypto.randomBytes() pour une génération cryptographiquement sécurisée
+ * - 32 bytes (256 bits) d'entropie pour résister aux attaques par force brute
+ * - Format hexadécimal pour faciliter la copie/sauvegarde par l'utilisateur
+ *
+ * @returns Clé de récupération au format hexadécimal (64 caractères)
  */
 export function generateRecoveryKey(): string {
-  const randomBytes = createHash('sha256')
-    .update(Math.random().toString())
-    .update(Date.now().toString())
-    .digest('hex');
-
-  return randomBytes;
+  return randomBytes(32).toString('hex');
 }
 
 /**
