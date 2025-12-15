@@ -11,7 +11,7 @@ export default registerAs(
     password: process.env.DATABASE_PASSWORD,
     database: process.env.DATABASE_NAME,
     entities: [__dirname + '/../**/*.entity{.ts,.js}'],
-    synchronize: process.env.NODE_ENV !== 'production', // true en dev, false en prod
+    synchronize: true, // TypeORM crée/modifie les tables automatiquement
     logging: process.env.NODE_ENV === 'development',
     ssl:
       process.env.DATABASE_SSL === 'true'
