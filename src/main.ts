@@ -3,6 +3,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
@@ -11,6 +12,9 @@ async function bootstrap() {
   });
 
   const configService = app.get(ConfigService);
+
+  // Global Logging Interceptor (logs sécurisés sans données sensibles)
+  app.useGlobalInterceptors(new LoggingInterceptor());
 
   // Global Validation Pipe (protection contre les injections)
   app.useGlobalPipes(
