@@ -4,9 +4,13 @@ import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import { CloudLoggingLogger } from './common/logger/cloud-logging.logger';
 import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
+  // Utiliser le logger Cloud Logging en production
+  const isProduction = process.env.NODE_ENV === 'production';
+  
   const startTime = Date.now();
   console.log('========================================');
   console.log('[STARTUP] Starting Aegis API...');
@@ -19,7 +23,9 @@ async function bootstrap() {
   console.log('[STARTUP] Creating NestFactory... (this connects to DB)');
   
   const app = await NestFactory.create(AppModule, {
-    logger: ['error', 'warn', 'log'],
+    logger: isProduction 
+      ? new CloudLoggingLogger('NestJS')
+      : ['error', 'warn', 'log', 'debug'],
   });
   
   console.log(`[STARTUP] NestFactory created in ${Date.now() - startTime}ms`);
