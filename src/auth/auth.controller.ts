@@ -16,6 +16,7 @@ import {
   ApiResponse,
   ApiBearerAuth,
 } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -41,6 +42,7 @@ export class AuthController {
   ) {}
 
   @Post('register')
+  @Throttle({ default: { limit: 10, ttl: 60000 } }) 
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary: "Inscription d'un nouvel utilisateur",
@@ -49,6 +51,7 @@ export class AuthController {
   })
   @ApiResponse({ status: 201, description: 'Utilisateur créé avec succès' })
   @ApiResponse({ status: 409, description: 'Email déjà utilisé' })
+  @ApiResponse({ status: 429, description: 'Trop de tentatives' })
   async register(
     @Body() registerDto: RegisterDto,
     @Res({ passthrough: true }) response: Response,
@@ -66,6 +69,7 @@ export class AuthController {
   }
 
   @Post('login')
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) 
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: "Connexion d'un utilisateur (Zero-Knowledge)",
@@ -74,6 +78,7 @@ export class AuthController {
   })
   @ApiResponse({ status: 200, description: 'Connexion réussie' })
   @ApiResponse({ status: 401, description: 'Identifiants invalides' })
+  @ApiResponse({ status: 429, description: 'Trop de tentatives' })
   async login(
     @Body() loginDto: LoginDto,
     @Req() request: Request,
@@ -105,6 +110,7 @@ export class AuthController {
   }
 
   @Post('refresh')
+  @Throttle({ default: { limit: 30, ttl: 60000 } }) 
   @HttpCode(HttpStatus.OK)
   async refresh(
     @Body() refreshTokenDto: RefreshTokenDto,
