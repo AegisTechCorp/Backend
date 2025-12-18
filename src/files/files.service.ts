@@ -53,15 +53,35 @@ export class FilesService {
     file: Express.Multer.File,
     uploadDto: UploadFileDto,
   ): Promise<FileAttachment> {
-    // 1. Vérifier que le dossier médical existe et appartient à l'utilisateur
-    const medicalRecord = await this.medicalRecordRepository.findOne({
-      where: { id: medicalRecordId, userId },
-    });
+    // Ajouter un log pour capturer les erreurs potentielles
+    try {
+      // 1. Vérifier que le dossier médical existe et appartient à l'utilisateur
+      const medicalRecord = await this.medicalRecordRepository.findOne({
+        where: { id: medicalRecordId, userId },
+      });
 
-    if (!medicalRecord) {
-      throw new NotFoundException(
-        'Dossier médical non trouvé ou accès interdit',
-      );
+      if (!medicalRecord) {
+        throw new NotFoundException(
+          'Dossier médical non trouvé ou accès interdit',
+        );
+      }
+    } catch (error) {
+      console.error('❌ Erreur lors de la vérification du dossier médical:', error);
+      throw error;
+    }
+
+    // Ajouter un log pour capturer les erreurs lors de la génération du fichier
+    try {
+      // 2. Générer un UUID pour le fichier
+      const fileUuid = uuidv4();
+      const fileExtension = this.getExtensionFromMimeType(uploadDto.mimeType);
+      const filename = `${fileUuid}${fileExtension}`;
+      const filepath = path.join(this.uploadDir, filename);
+
+      console.log('📂 Chemin du fichier généré:', filepath);
+    } catch (error) {
+      console.error('❌ Erreur lors de la génération du fichier:', error);
+      throw error;
     }
 
     // Log pour debug
