@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, InternalServerErrorException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
@@ -9,7 +9,7 @@ import {
   encryptFileServerSide,
   decryptFileServerSide,
 } from './utils/server-encryption.utils';
-import * as fs from 'fs/promises';
+import * as fs from 'fs';
 import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -42,7 +42,18 @@ export class FilesService {
     @InjectRepository(MedicalRecord)
     private readonly medicalRecordRepository: Repository<MedicalRecord>,
     private readonly configService: ConfigService,
-  ) {}
+  ) {
+    // Vérifier et créer le répertoire si nécessaire
+    try {
+      if (!fs.existsSync(this.uploadDir)) {
+        fs.mkdirSync(this.uploadDir, { recursive: true });
+        console.log(`📂 Répertoire créé : ${this.uploadDir}`);
+      }
+    } catch (error) {
+      console.error('❌ Erreur lors de la création du répertoire :', error);
+      throw new InternalServerErrorException('Erreur interne du serveur');
+    }
+  }
 
   /**
    * Upload un fichier (chiffré ou non selon le mode)
