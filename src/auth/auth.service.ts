@@ -11,10 +11,11 @@ import { User } from '../users/entities/user.entity';
 import { RefreshToken } from './entities/refresh-token.entity';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { TwoFactorService } from './two-factor.service';
 import {
   hashPassword,
   verifyPassword,
-  generateVaultSalt,
+  generateAuthSalt,
 } from './utils/crypto.utils';
 import * as crypto from 'crypto';
 
@@ -27,6 +28,7 @@ export class AuthService {
     private readonly refreshTokenRepository: Repository<RefreshToken>,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly twoFactorService: TwoFactorService,
   ) {}
 
   /**
@@ -34,7 +36,7 @@ export class AuthService {
    * (Authentification classique + Vault Zero-Knowledge)
    *
    * @param registerDto - Données d'inscription (email, password)
-   * @returns Tokens JWT (access + refresh), utilisateur et vault_salt
+   * @returns Tokens JWT (access + refresh), utilisateur et authSalt
    */
   async register(registerDto: RegisterDto) {
     const { email, password, firstName, lastName, dateOfBirth } = registerDto;
@@ -50,14 +52,14 @@ export class AuthService {
     // 1. Hasher le mot de passe avec Bcrypt pour l'authentification
     const passwordHash = await hashPassword(password);
 
-    // 2. Générer un sel aléatoire pour le vault (dérivation client-side)
-    const vaultSalt = generateVaultSalt();
+    // 2. Générer un sel aléatoire pour la dérivation de la masterKey (côté client)
+    const authSalt = generateAuthSalt();
 
     // 3. Créer l'utilisateur
     const user = this.userRepository.create({
       email,
       passwordHash,
-      vaultSalt,
+      authSalt,
       firstName,
       lastName,
       dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
@@ -70,7 +72,7 @@ export class AuthService {
 
     return {
       user: user.toJSON(),
-      vaultSalt, // Retourner le salt au client pour dérivation de la masterKey
+      authSalt, // Retourner le salt au client pour dérivation de la masterKey
       ...tokens,
     };
   }
@@ -82,7 +84,7 @@ export class AuthService {
    * @param loginDto - Données de connexion (email, password)
    * @param ipAddress - Adresse IP du client (optionnel, pour tracking)
    * @param userAgent - User agent du client (optionnel, pour tracking)
-   * @returns Tokens JWT (access + refresh), utilisateur et vault_salt
+   * @returns Tokens JWT (access + refresh), utilisateur et authSalt
    */
   async login(loginDto: LoginDto, ipAddress?: string, userAgent?: string) {
     const { email, password } = loginDto;
@@ -105,12 +107,22 @@ export class AuthService {
       throw new UnauthorizedException('Identifiants invalides');
     }
 
-    // Générer les tokens JWT
+    // Si 2FA activé, ne pas donner les tokens complets
+    if (user.twoFactorEnabled) {
+      const tempToken = this.generateTempToken(user.id);
+      return {
+        requires2FA: true,
+        tempToken,
+        message: 'Veuillez fournir votre code 2FA',
+      };
+    }
+
+    // Login normal sans 2FA
     const tokens = await this.generateTokens(user, ipAddress, userAgent);
 
     return {
       user: user.toJSON(),
-      vaultSalt: user.vaultSalt, // Retourner le salt pour dérivation de la masterKey
+      authSalt: user.authSalt, // Retourner le salt pour dérivation de la masterKey
       ...tokens,
     };
   }
@@ -243,5 +255,145 @@ export class AuthService {
       throw new UnauthorizedException('Utilisateur non trouvé ou désactivé');
     }
     return user;
+  }
+
+  /**
+   * Générer un token temporaire pour le flux 2FA
+   * (courte durée de vie : 5 minutes)
+   */
+  private generateTempToken(userId: string): string {
+    return this.jwtService.sign(
+      { userId, type: '2fa-temp' },
+      {
+        secret: this.configService.get('jwt.accessToken.secret'),
+        expiresIn: '5m',
+      },
+    );
+  }
+
+  /**
+   * Vérifier et décoder un token temporaire 2FA
+   */
+  private verifyTempToken(tempToken: string): string {
+    try {
+      const payload = this.jwtService.verify<{ type: string; userId: string }>(
+        tempToken,
+        {
+          secret: this.configService.get('jwt.accessToken.secret'),
+        },
+      );
+
+      if (payload.type !== '2fa-temp') {
+        throw new UnauthorizedException('Token invalide');
+      }
+
+      return payload.userId;
+    } catch {
+      throw new UnauthorizedException('Token 2FA expiré ou invalide');
+    }
+  }
+
+  /**
+   * Activer le 2FA pour un utilisateur (étape 1 : génération du QR code)
+   */
+  async enable2FA(userId: string) {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new UnauthorizedException('Utilisateur non trouvé');
+    }
+
+    // Générer un nouveau secret
+    const { secret, otpauth_url } = this.twoFactorService.generateSecret(
+      user.email,
+    );
+
+    // Stocker temporairement le secret (pas encore activé)
+    user.twoFactorSecret = secret;
+    await this.userRepository.save(user);
+
+    // Générer le QR code
+    const qrCode = await this.twoFactorService.generateQRCode(otpauth_url);
+
+    return { qrCode, secret };
+  }
+
+  /**
+   * Vérifier et activer définitivement le 2FA (étape 2 : validation du code)
+   */
+  async verify2FA(userId: string, token: string) {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user || !user.twoFactorSecret) {
+      throw new UnauthorizedException("Veuillez d'abord activer le 2FA");
+    }
+
+    // Vérifier le code
+    const isValid = this.twoFactorService.verifyToken(
+      user.twoFactorSecret,
+      token,
+    );
+
+    if (!isValid) {
+      throw new UnauthorizedException('Code 2FA invalide');
+    }
+
+    // Activer définitivement le 2FA
+    user.twoFactorEnabled = true;
+    await this.userRepository.save(user);
+
+    return { success: true, message: '2FA activé avec succès' };
+  }
+
+  /**
+   * Valider le 2FA lors du login et retourner les tokens complets
+   */
+  async validate2FALogin(
+    tempToken: string,
+    code: string,
+    ipAddress?: string,
+    userAgent?: string,
+  ) {
+    // Vérifier le token temporaire
+    const userId = this.verifyTempToken(tempToken);
+
+    // Récupérer l'utilisateur
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user || !user.twoFactorEnabled || !user.twoFactorSecret) {
+      throw new UnauthorizedException('2FA non configuré');
+    }
+
+    // Vérifier le code 2FA
+    const isValid = this.twoFactorService.verifyToken(
+      user.twoFactorSecret,
+      code,
+    );
+
+    if (!isValid) {
+      throw new UnauthorizedException('Code 2FA invalide');
+    }
+
+    // Générer les tokens complets
+    const tokens = await this.generateTokens(user, ipAddress, userAgent);
+
+    return {
+      user: user.toJSON(),
+      authSalt: user.authSalt,
+      ...tokens,
+    };
+  }
+
+  /**
+   * Désactiver le 2FA pour un utilisateur
+   */
+  async disable2FA(userId: string) {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new UnauthorizedException('Utilisateur non trouvé');
+    }
+
+    user.twoFactorEnabled = false;
+    user.twoFactorSecret = '';
+    await this.userRepository.save(user);
+
+    return { success: true, message: '2FA désactivé avec succès' };
   }
 }

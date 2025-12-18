@@ -3,14 +3,14 @@ import {
   NestInterceptor,
   ExecutionContext,
   CallHandler,
-  Logger,
 } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { tap, catchError } from 'rxjs/operators';
+import { CloudLoggingLogger } from '../logger/cloud-logging.logger';
 
 @Injectable()
 export class LoggingInterceptor implements NestInterceptor {
-  private readonly logger = new Logger('HTTP');
+  private readonly logger = new CloudLoggingLogger('HTTP');
 
   // Liste des champs sensibles à ne JAMAIS logger
   private readonly SENSITIVE_FIELDS = [
@@ -33,51 +33,53 @@ export class LoggingInterceptor implements NestInterceptor {
     const { method, url, ip, body } = request;
     const userAgent = request.get('user-agent') || 'Unknown';
     const startTime = Date.now();
+    
+    // Récupérer l'userId si authentifié (pour traçabilité)
+    const userId = request.user?.sub || request.user?.id || undefined;
 
     // Nettoyer le body avant de logger (gérer le cas où body est null/undefined pour les GET)
     const sanitizedBody = body ? this.sanitizeObject(body) : {};
 
-    // Log de la requête entrante (sans données sensibles)
-    this.logger.log(
-      `Incoming → ${method} ${url} | IP: ${ip} | UA: ${userAgent.substring(0, 50)}`,
-    );
-
-    if (sanitizedBody && Object.keys(sanitizedBody).length > 0) {
-      this.logger.debug(`Body: ${JSON.stringify(sanitizedBody)}`);
+    // Log de la requête entrante (sans données sensibles) - uniquement en dev
+    if (process.env.NODE_ENV !== 'production') {
+      this.logger.debug(`Incoming → ${method} ${url}`);
+      if (sanitizedBody && Object.keys(sanitizedBody).length > 0) {
+        this.logger.debug(`Body: ${JSON.stringify(sanitizedBody)}`);
+      }
     }
 
     return next.handle().pipe(
-      tap((response) => {
+      tap(() => {
         const responseTime = Date.now() - startTime;
         const httpResponse = context.switchToHttp().getResponse();
         const statusCode = httpResponse.statusCode;
 
-        // Log de la réponse réussie
-        this.logger.log(
-          `Success ← ${method} ${url} | Status: ${statusCode} | ${responseTime}ms`,
-        );
+        // Log structuré pour Cloud Logging
+        this.logger.logHttpRequest({
+          method,
+          url,
+          statusCode,
+          duration: responseTime,
+          ip,
+          userAgent: userAgent.substring(0, 100),
+          userId,
+        });
       }),
       catchError((error) => {
         const responseTime = Date.now() - startTime;
         const statusCode = error.status || 500;
 
-        // Log des erreurs (sécurisé)
-        if (statusCode === 401) {
-          // Échec d'authentification (potentielle tentative de brute force)
-          this.logger.warn(
-            `Auth Failed ← ${method} ${url} | IP: ${ip} | ${responseTime}ms`,
-          );
-        } else if (statusCode >= 500) {
-          // Erreur serveur (bug à corriger)
-          this.logger.error(
-            `Server Error ← ${method} ${url} | Status: ${statusCode} | Error: ${error.message} | ${responseTime}ms`,
-          );
-        } else if (statusCode >= 400) {
-          // Erreur client (validation, etc.)
-          this.logger.warn(
-            `Client Error ← ${method} ${url} | Status: ${statusCode} | ${responseTime}ms`,
-          );
-        }
+        // Log structuré avec erreur
+        this.logger.logHttpRequest({
+          method,
+          url,
+          statusCode,
+          duration: responseTime,
+          ip,
+          userAgent: userAgent.substring(0, 100),
+          userId,
+          error: error.message,
+        });
 
         throw error;
       }),
