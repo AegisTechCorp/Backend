@@ -9,7 +9,7 @@ import {
   encryptFileServerSide,
   decryptFileServerSide,
 } from './utils/server-encryption.utils';
-import * as fs from 'fs';
+import * as fs from 'fs/promises'; // Revenir à fs/promises pour les méthodes asynchrones
 import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -43,12 +43,15 @@ export class FilesService {
     private readonly medicalRecordRepository: Repository<MedicalRecord>,
     private readonly configService: ConfigService,
   ) {
-    // Vérifier et créer le répertoire si nécessaire
+    this.ensureUploadDirExists();
+  }
+
+  private async ensureUploadDirExists() {
     try {
-      if (!fs.existsSync(this.uploadDir)) {
-        fs.mkdirSync(this.uploadDir, { recursive: true });
+      await fs.access(this.uploadDir).catch(async () => {
+        await fs.mkdir(this.uploadDir, { recursive: true });
         console.log(`📂 Répertoire créé : ${this.uploadDir}`);
-      }
+      });
     } catch (error) {
       console.error('❌ Erreur lors de la création du répertoire :', error);
       throw new InternalServerErrorException('Erreur interne du serveur');
